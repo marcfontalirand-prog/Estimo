@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0a0a0b">
+    <title>Estimo</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0a0a0b',
+                        accent: '#c9a96e',
+                        ink: { 900: '#0a0a0b', 800: '#121214', 700: '#1a1a1d' }
+                    },
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"Segoe UI"', 'Inter', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .tab-content { animation: fadeIn 0.35s cubic-bezier(.2,.8,.2,1); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        .toast-enter { animation: slideDown 0.4s cubic-bezier(.2,.8,.2,1) forwards; }
+        @keyframes slideDown { from { transform: translateY(-120%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .view-enter { animation: viewIn 0.5s cubic-bezier(.2,.8,.2,1); }
+        @keyframes viewIn { from { opacity: 0; transform: scale(.985); } to { opacity: 1; transform: scale(1); } }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+        html { -webkit-tap-highlight-color: transparent; }
+        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+    </style>
+</head>
+<body class="bg-stone-100 dark:bg-ink-900 text-stone-900 dark:text-stone-100 antialiased font-sans overflow-x-hidden transition-colors duration-500 selection:bg-accent/30">
+    <div aria-hidden="true" class="pointer-events-none fixed inset-0 overflow-hidden">
+        <div class="absolute -top-40 -left-32 w-[28rem] h-[28rem] rounded-full bg-accent/20 dark:bg-accent/10 blur-[120px]"></div>
+        <div class="absolute top-1/2 -right-40 w-[26rem] h-[26rem] rounded-full bg-stone-300/60 dark:bg-white/[0.04] blur-[120px]"></div>
+    </div>
+    <div id="root" class="relative"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const TABS = ['client', 'bien', 'technique', 'financier', 'medias'];
+        const TAB_LABELS = { client: 'Client', bien: 'Bien', technique: 'Technique', financier: 'Financier', medias: 'Médias' };
+
+        const Field = ({ label, type = 'text', value, onChange }) => (
+            <label className="flex flex-col mb-4 w-full group">
+                <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-stone-500 dark:text-stone-500 mb-2 ml-0.5 transition-colors group-focus-within:text-accent">{label}</span>
+                <input type={type} value={value} onChange={onChange} className="w-full h-12 px-4 rounded-2xl text-[15px] bg-white/70 dark:bg-white/[0.04] border border-stone-200/80 dark:border-white/[0.08] text-stone-900 dark:text-stone-100 placeholder:text-stone-400 outline-none backdrop-blur-xl transition-all duration-200 focus:border-accent/70 focus:bg-white dark:focus:bg-white/[0.07] focus:ring-4 focus:ring-accent/15" />
+            </label>
+        );
+
+        const SectionTitle = ({ icon, title, subtitle }) => (
+            <div className="flex items-center gap-3 mb-6">
+                <div className="flex items-center justify-center w-10 h-10 rounded-2xl bg-accent/10 border border-accent/20 text-accent">
+                    <i data-lucide={icon} className="w-[18px] h-[18px]"></i>
+                </div>
+                <div>
+                    <h2 className="text-lg font-semibold tracking-tight text-stone-900 dark:text-white">{title}</h2>
+                    <p className="text-xs text-stone-500">{subtitle}</p>
+                </div>
+            </div>
+        );
+
+        function getEmptyClient() {
+            return {
+                id: Date.now(), date: new Date().toLocaleDateString('fr-FR'),
+                nom: '', prenom: '', telephone: '', email: '', adresse: '', typeBien: 'Appartement',
+                surfaceHabitable: '', surfaceCarrez: '', annexes: { terrasse: '', balcon: '', jardin: '', cave: '', garage: '' },
+                distribution: { pieces: '', chambres: '', sainte: '', hauteurPlafond: '' },
+                env: { exposition: '', visAVis: '', bruit: '' },
+                chauffage: { type: '', energie: '', age: '' },
+                menuiseries: { vitrage: '', fenetres: '', volets: '', isolation: '' },
+                equipements: { cuisineEquipee: false, stationnement: false, borneRecharge: false },
+                travaux: { nature: '', dates: '', factures: false },
+                etat: { humidite: false, fissures: false, toiture: '', notesEtat: '' },
+                charges: { fonciere: '', copro: '' },
+                copro: { travauxVotes: '', ambiance: '' },
+                projet: { raison: '', delai: '', prixAttendu: '' },
+                medias: []
+            };
+        }
+
+        function App() {
+            // Initialisation de la vue basée sur l'URL (Hash) pour le retour Android
+            const [view, setView] = useState(() => {
+                const hash = window.location.hash.replace('#', '');
+                if (hash === 'list') return 'list';
+                if (hash === 'form') return 'form';
+                return localStorage.getItem('immo_draft') ? 'form' : 'home';
+            }); 
+            
+            const [clients, setClients] = useState(() => {
+                const saved = localStorage.getItem('immo_clients');
+                return saved ? JSON.parse(saved) : [];
+            });
+            const [currentClient, setCurrentClient] = useState(() => {
+                const draft = localStorage.getItem('immo_draft');
+                return draft ? JSON.parse(draft) : getEmptyClient();
+            });
+            
+            const [activeTab, setActiveTab] = useState('client');
+            const [isMenuOpen, setIsMenuOpen] = useState(false);
+            const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+            
+            const [theme, setTheme] = useState(() => localStorage.getItem('immo_theme') || 'light');
+
+            // Routeur natif pour intercepter le bouton Retour physique d'Android
+            useEffect(() => {
+                const handleHashChange = () => {
+                    const hash = window.location.hash.replace('#', '');
+                    if (hash === 'list') setView('list');
+                    else if (hash === 'form') setView('form');
+                    else setView('home');
+                };
+                window.addEventListener('hashchange', handleHashChange);
+                
+                // Si on a restauré un brouillon au démarrage, on force l'URL pour le retour
+                if (view === 'form' && window.location.hash !== '#form') {
+                    window.history.replaceState(null, null, '#form');
+                }
+
+                return () => window.removeEventListener('hashchange', handleHashChange);
+            }, [view]);
+
+            const navigate = (newView) => {
+                window.location.hash = newView === 'home' ? '' : newView;
+                setView(newView);
+            };
+
+            useEffect(() => {
+                const root = window.document.documentElement;
+                if (theme === 'dark') {
+                    root.classList.add('dark');
+                } else {
+                    root.classList.remove('dark');
+                }
+                localStorage.setItem('immo_theme', theme);
+            }, [theme]);
+
+            const showNotification = (msg, type = 'success') => {
+                setToast({ show: true, message: msg, type });
+                setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
+            };
+
+            const [touchStart, setTouchStart] = useState(null);
+            const [touchEnd, setTouchEnd] = useState(null);
+
+            const handleTouchStart = (e) => { setTouchEnd(null); setTouchStart(e.targetTouches[0].clientX); };
+            const handleTouchMove = (e) => { setTouchEnd(e.targetTouches[0].clientX); };
+            const handleTouchEnd = () => {
+                if (!touchStart || !touchEnd) return;
+                const distance = touchStart - touchEnd;
+                const currentIndex = TABS.indexOf(activeTab);
+                if (distance > 50 && currentIndex < TABS.length - 1) setActiveTab(TABS[currentIndex + 1]);
+                if (distance < -50 && currentIndex > 0) setActiveTab(TABS[currentIndex - 1]);
+                setTouchStart(null); setTouchEnd(null);
+            };
+
+            useEffect(() => {
+                if (view === 'form') localStorage.setItem('immo_draft', JSON.stringify(currentClient));
+            }, [currentClient, view]);
+
+            useEffect(() => {
+                setTimeout(() => lucide.createIcons(), 50);
+            }, [view, activeTab, currentClient.medias, isMenuOpen, theme, toast.show]);
+
+            const handleSave = () => {
+                if (!currentClient.nom && !currentClient.prenom) {
+                    showNotification('Nom ou prénom obligatoire.', 'error');
+                    return;
+                }
+                let updatedClients = [...clients];
+                const existingIndex = clients.findIndex(c => c.id === currentClient.id);
+                if (existingIndex >= 0) updatedClients[existingIndex] = currentClient;
+                else updatedClients = [currentClient, ...clients];
+
+                try {
+                    localStorage.setItem('immo_clients', JSON.stringify(updatedClients));
+                    setClients(updatedClients);
+                    localStorage.removeItem('immo_draft');
+                    setCurrentClient(getEmptyClient());
+                    navigate('list');
+                    showNotification('Dossier sauvegardé.');
+                } catch (e) {
+                    showNotification('Mémoire pleine. Nettoyez vos archives.', 'error');
+                }
+            };
+
+            const abandonDraft = () => {
+                if(window.confirm("Annuler cette estimation en cours ?")) {
+                    localStorage.removeItem('immo_draft');
+                    setCurrentClient(getEmptyClient());
+                    navigate('home');
+                }
+            };
+
+            const navigateHome = () => {
+                setIsMenuOpen(false);
+                setTimeout(() => navigate('home'), 10);
+            };
+
+            const toggleTheme = () => {
+                setTheme(theme === 'dark' ? 'light' : 'dark');
+                setIsMenuOpen(false);
+            };
+
+            const triggerCamera = () => document.getElementById('camera-input').click();
+            const triggerGallery = () => document.getElementById('gallery-input').click();
+
+            const handleShareText = async (c, e) => {
+                e.stopPropagation();
+                const text = `FICHE ESTIMATION : ${c.typeBien}\nCLIENT: ${c.nom} ${c.prenom}\nTEL: ${c.telephone} | EMAIL: ${c.email}\nADRESSE: ${c.adresse}\n\n--- BIEN ---\nSurfaces : ${c.surfaceHabitable}m² hab / ${c.surfaceCarrez}m² Carrez\nDistribution : ${c.distribution.pieces} Pièces, ${c.distribution.chambres} Chambres\n\n--- TECHNIQUE ---\nChauffage : ${c.chauffage.type}\nMenuiseries : ${c.menuiseries.vitrage}\n\n--- FINANCIER & PROJET ---\nFoncier: ${c.charges.fonciere}€ | Copro: ${c.charges.copro}€/mois\nProjet: ${c.projet.raison} (Délai: ${c.projet.delai})\nPrix attendu: ${c.projet.prixAttendu}€`;
+                if (navigator.share) {
+                    try { await navigator.share({ title: `Fiche ${c.nom}`, text }); } catch (err) {}
+                } else {
+                    navigator.clipboard.writeText(text);
+                    showNotification("Copié dans le presse-papier.");
+                }
+            };
+
+            const handleExportVCard = (c, e) => {
+                e.stopPropagation();
+                const vcard = `BEGIN:VCARD\nVERSION:3.0\nN:${c.nom};${c.prenom};;;\nFN:${c.prenom} ${c.nom}\nTEL;TYPE=CELL:${c.telephone}\nEMAIL:${c.email}\nEND:VCARD`;
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(new Blob([vcard], { type: "text/vcard" }));
+                a.download = `${c.nom}_${c.prenom}.vcf`;
+                a.click();
+            };
+
+            const handleMediaUpload = (e) => {
+                const files = Array.from(e.target.files);
+                if (files.length === 0) return;
+                
+                Promise.all(files.map(file => {
+                    return new Promise((resolve) => {
+                        if (file.type.startsWith('image/')) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                                const img = new Image();
+                                img.onload = () => {
+                                    const canvas = document.createElement('canvas');
+                                    const scale = 800 / img.width;
+                                    canvas.width = 800; canvas.height = img.height * scale;
+                                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                                    resolve({ type: 'image/jpeg', url: canvas.toDataURL('image/jpeg', 0.7) });
+                                };
+                                img.src = event.target.result;
+                            };
+                            reader.readAsDataURL(file);
+                        } else {
+                            const reader = new FileReader();
+                            reader.onload = (ev) => resolve({ type: file.type, url: ev.target.result });
+                            reader.readAsDataURL(file);
+                        }
+                    });
+                })).then(newMedias => setCurrentClient(prev => ({ ...prev, medias: [...prev.medias, ...newMedias] })));
+                e.target.value = '';
+            };
+
+            const tabIndex = TABS.indexOf(activeTab);
+            const glassCard = "bg-white/60 dark:bg-white/[0.03] border border-stone-200/70 dark:border-white/[0.07] backdrop-blur-2xl";
+
+            return (
+                <div className="min-h-screen flex flex-col max-w-md mx-auto relative">
+                    
+                    {toast.show && (
+                        <div role="status" aria-live="polite" className="fixed top-4 inset-x-0 z-[60] max-w-md mx-auto px-4">
+                            <div className={`toast-enter flex items-center gap-3 px-4 py-3.5 rounded-2xl border backdrop-blur-2xl shadow-2xl shadow-black/20 ${toast.type === 'error' ? 'bg-red-500/90 border-red-400/40 text-white' : 'bg-stone-900/90 dark:bg-white/10 border-white/10 text-white'}`}>
+                                <div className={`flex items-center justify-center w-8 h-8 rounded-full ${toast.type === 'error' ? 'bg-white/20' : 'bg-accent/20 text-accent'}`}>
+                                    <i data-lucide={toast.type === 'error' ? 'alert-circle' : 'check-circle'} className="w-4 h-4"></i>
+                                </div>
+                                <span className="font-medium text-sm">{toast.message}</span>
+                            </div>
+                        </div>
+                    )}
+
+                    <header className="sticky top-0 z-40 px-4 pt-3 pb-2">
+                        <div className={`flex justify-between items-center h-14 pl-4 pr-2 rounded-2xl ${glassCard} shadow-lg shadow-stone-900/[0.03] dark:shadow-black/40`}>
+                            <button type="button" className="flex items-center gap-2.5" onClick={navigateHome} aria-label="Retour à l'accueil">
+                                <span className="flex items-center justify-center w-8 h-8 rounded-xl bg-stone-900 dark:bg-white text-accent dark:text-ink-900">
+                                    <i data-lucide="building-2" className="w-4 h-4"></i>
+                                </span>
+                                <span className="font-semibold text-[17px] tracking-tight">Estimo</span>
+                            </button>
+                            
+                            <div className="relative">
+                                <button onClick={() => setIsMenuOpen(!isMenuOpen)} aria-label="Ouvrir le menu" aria-expanded={isMenuOpen} className="flex items-center justify-center w-10 h-10 rounded-xl text-stone-600 dark:text-stone-300 hover:bg-stone-900/5 dark:hover:bg-white/[0.06] transition-colors">
+                                    <i data-lucide="menu" className="w-5 h-5"></i>
+                                </button>
+
+                                {isMenuOpen && (
+                                    <>
+                                        <div className="fixed inset-0 z-40 bg-black/10 dark:bg-black/40 backdrop-blur-[2px]" onClick={() => setIsMenuOpen(false)}></div>
+                                        <div className="toast-enter absolute right-0 mt-3 w-56 p-1.5 rounded-2xl bg-white/85 dark:bg-ink-800/85 border border-stone-200/70 dark:border-white/[0.08] backdrop-blur-2xl shadow-2xl shadow-black/20 z-50">
+                                            <button onClick={navigateHome} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-stone-700 dark:text-stone-200 hover:bg-stone-900/5 dark:hover:bg-white/[0.06] transition-colors">
+                                                <i data-lucide="home" className="w-4 h-4 text-stone-400"></i> Accueil
+                                            </button>
+                                            <a href="https://app.dvf.etalab.gouv.fr/" target="_blank" rel="noopener noreferrer" onClick={() => setIsMenuOpen(false)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-stone-700 dark:text-stone-200 hover:bg-stone-900/5 dark:hover:bg-white/[0.06] transition-colors">
+                                                <i data-lucide="map" className="w-4 h-4 text-stone-400"></i> Base DVF
+                                                <i data-lucide="arrow-up-right" className="w-3.5 h-3.5 ml-auto text-stone-400"></i>
+                                            </a>
+                                            <div className="h-px my-1 mx-2 bg-stone-200/80 dark:bg-white/[0.06]"></div>
+                                            <button onClick={toggleTheme} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-stone-700 dark:text-stone-200 hover:bg-stone-900/5 dark:hover:bg-white/[0.06] transition-colors">
+                                                <i data-lucide={theme === 'dark' ? 'sun' : 'moon'} className="w-4 h-4 text-stone-400"></i> {theme === 'dark' ? 'Mode Clair' : 'Mode Sombre'}
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </header>
+
+                    <main className="flex-1 px-4 pt-4 pb-8 overflow-x-hidden">
+                        {view === 'home' && (
+                            <div className="view-enter flex flex-col justify-between min-h-[78vh] pt-10">
+                                <div className="flex flex-col items-start">
+                                    <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-medium uppercase tracking-[0.18em] text-accent bg-accent/10 border border-accent/20">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-accent"></span>
+                                        Évaluation sur site
+                                    </span>
+                                    <h1 className="mt-6 text-5xl font-semibold tracking-[-0.04em] leading-[0.95] text-stone-900 dark:text-white text-balance">
+                                        L&apos;estimation,<br /><span className="text-stone-400 dark:text-stone-500">sans compromis.</span>
+                                    </h1>
+                                    <p className="mt-5 text-[15px] leading-relaxed text-stone-500 dark:text-stone-400 max-w-xs text-pretty">
+                                        Collectez, documentez et partagez chaque visite avec la précision d&apos;un expert.
+                                    </p>
+                                </div>
+
+                                <div className="flex flex-col w-full gap-3 mt-12">
+                                    <button onClick={() => { localStorage.removeItem('immo_draft'); setCurrentClient(getEmptyClient()); setActiveTab('client'); navigate('form'); }}
+                                            className="group w-full flex items-center gap-4 p-4 rounded-3xl bg-stone-900 dark:bg-white text-white dark:text-ink-900 shadow-2xl shadow-stone-900/20 dark:shadow-white/5 active:scale-[0.98] transition-transform">
+                                        <span className="flex items-center justify-center w-12 h-12 rounded-2xl bg-accent text-ink-900">
+                                            <i data-lucide="plus" className="w-5 h-5"></i>
+                                        </span>
+                                        <span className="flex flex-col items-start">
+                                            <span className="font-semibold text-[16px] tracking-tight">Nouveau Dossier</span>
+                                            <span className="text-xs opacity-60">Démarrer une estimation</span>
+                                        </span>
+                                        <i data-lucide="arrow-right" className="w-5 h-5 ml-auto opacity-60"></i>
+                                    </button>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <button onClick={() => navigate('list')}
+                                                className={`flex flex-col items-start gap-6 p-4 rounded-3xl ${glassCard} text-stone-800 dark:text-stone-100 active:scale-[0.98] transition-transform`}>
+                                            <span className="flex items-center justify-between w-full">
+                                                <i data-lucide="folder-open" className="w-5 h-5 text-stone-500"></i>
+                                                <span className="text-2xl font-semibold tabular-nums tracking-tight">{clients.length}</span>
+                                            </span>
+                                            <span className="font-medium text-sm">Archives</span>
+                                        </button>
+                                        <a href="https://app.dvf.etalab.gouv.fr/" target="_blank" rel="noopener noreferrer"
+                                                className={`flex flex-col items-start gap-6 p-4 rounded-3xl ${glassCard} text-stone-800 dark:text-stone-100 active:scale-[0.98] transition-transform`}>
+                                            <span className="flex items-center justify-between w-full">
+                                                <i data-lucide="map" className="w-5 h-5 text-stone-500"></i>
+                                                <i data-lucide="arrow-up-right" className="w-4 h-4 text-stone-400"></i>
+                                            </span>
+                                            <span className="font-medium text-sm">Base DVF</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {view === 'list' && (
+                            <div className="view-enter">
+                                <div className="flex items-end justify-between mb-6 mt-2">
+                                    <div>
+                                        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-stone-500">Portefeuille</p>
+                                        <h1 className="text-3xl font-semibold tracking-tight text-stone-900 dark:text-white">Archives</h1>
+                                    </div>
+                                    <span className="text-sm tabular-nums text-stone-500">{clients.length} dossier{clients.length > 1 ? 's' : ''}</span>
+                                </div>
+
+                                {clients.length === 0 && (
+                                    <div className={`flex flex-col items-center text-center py-16 px-6 rounded-3xl ${glassCard}`}>
+                                        <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-stone-900/5 dark:bg-white/[0.05] mb-4">
+                                            <i data-lucide="inbox" className="w-6 h-6 text-stone-400"></i>
+                                        </div>
+                                        <p className="font-medium text-stone-800 dark:text-stone-200">Aucune archive.</p>
+                                        <p className="text-sm text-stone-500 mt-1">Vos dossiers enregistrés apparaîtront ici.</p>
+                                    </div>
+                                )}
+
+                                <div className="space-y-3">
+                                    {clients.map(c => (
+                                        <div key={c.id} onClick={() => { setCurrentClient(c); setActiveTab('client'); navigate('form'); }} 
+                                             className={`p-4 rounded-3xl ${glassCard} cursor-pointer transition-all hover:border-accent/40 active:scale-[0.99]`}>
+                                            <div className="flex items-start gap-3">
+                                                <div className="flex items-center justify-center shrink-0 w-11 h-11 rounded-2xl bg-gradient-to-br from-accent/30 to-accent/5 border border-accent/20 text-accent font-semibold text-sm uppercase">
+                                                    {((c.prenom || '')[0] || '') + ((c.nom || '')[0] || '') || '—'}
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <h3 className="font-semibold tracking-tight text-stone-900 dark:text-white truncate">{c.nom} {c.prenom}</h3>
+                                                        <span className="shrink-0 text-[10px] font-medium uppercase tracking-wider text-accent bg-accent/10 px-2 py-0.5 rounded-full">{c.typeBien}</span>
+                                                    </div>
+                                                    <p className="text-xs text-stone-500 mt-1 truncate flex items-center gap-1">
+                                                        <i data-lucide="map-pin" className="w-3 h-3 shrink-0"></i>
+                                                        <span className="truncate">{c.adresse || 'Adresse non renseignée'}</span>
+                                                    </p>
+                                                    <p className="text-[11px] text-stone-400 mt-0.5 tabular-nums">{c.date}</p>
+                                                </div>
+                                                <i data-lucide="chevron-right" className="w-4 h-4 text-stone-400 mt-1"></i>
+                                            </div>
+                                            
+                                            <div className="flex gap-2 mt-4 pt-3 border-t border-stone-200/70 dark:border-white/[0.06]">
+                                                <button onClick={(e) => handleShareText(c, e)} className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl text-xs font-medium text-stone-700 dark:text-stone-300 bg-stone-900/[0.04] dark:bg-white/[0.04] hover:bg-stone-900/[0.08] dark:hover:bg-white/[0.08] transition-colors">
+                                                    <i data-lucide="share-2" className="w-3.5 h-3.5"></i><span>Partager</span>
+                                                </button>
+                                                <button onClick={(e) => handleExportVCard(c, e)} className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl text-xs font-medium text-accent bg-accent/10 hover:bg-accent/20 transition-colors">
+                                                    <i data-lucide="user-plus" className="w-3.5 h-3.5"></i><span>VCard</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {view === 'form' && (
+                            <div className="view-enter pb-28" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+                                <div className="flex items-center justify-between mb-3 px-1">
+                                    <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-stone-500">Étape {tabIndex + 1} / {TABS.length}</p>
+                                    <p className="text-[11px] text-stone-400">Glissez pour naviguer</p>
+                                </div>
+                                <div className="h-0.5 w-full rounded-full bg-stone-200 dark:bg-white/[0.06] mb-4 overflow-hidden">
+                                    <div className="h-full bg-accent rounded-full transition-all duration-500 ease-out" style={{ width: `${((tabIndex + 1) / TABS.length) * 100}%` }}></div>
+                                </div>
+
+                                <div role="tablist" className={`flex overflow-x-auto gap-1 p-1 rounded-2xl ${glassCard} no-scrollbar mb-6`}>
+                                    {TABS.map(tab => (
+                                        <button key={tab} role="tab" aria-selected={activeTab === tab} onClick={() => setActiveTab(tab)}
+                                            className={`flex-1 shrink-0 px-3 h-9 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-300 ${activeTab === tab ? 'bg-stone-900 dark:bg-white text-white dark:text-ink-900 shadow-md' : 'text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'}`}>
+                                            {TAB_LABELS[tab]}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div className={`tab-content p-5 rounded-3xl ${glassCard}`} key={activeTab}>
+                                    {activeTab === 'client' && (
+                                        <>
+                                            <SectionTitle icon="user" title="Client" subtitle="Coordonnées et type de bien" />
+                                            <label className="flex flex-col mb-4 group">
+                                                <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-stone-500 mb-2 ml-0.5 group-focus-within:text-accent transition-colors">Type de bien</span>
+                                                <div className="relative">
+                                                    <select value={currentClient.typeBien} onChange={e => setCurrentClient({...currentClient, typeBien: e.target.value})} className="appearance-none w-full h-12 pl-4 pr-10 rounded-2xl text-[15px] bg-white/70 dark:bg-white/[0.04] border border-stone-200/80 dark:border-white/[0.08] text-stone-900 dark:text-stone-100 outline-none transition-all focus:border-accent/70 focus:ring-4 focus:ring-accent/15 dark:[&>option]:bg-ink-800">
+                                                        <option>Appartement</option><option>Maison</option><option>Box / Garage</option><option>Terrain</option><option>Commerce / Bureau</option><option>Immeuble</option>
+                                                    </select>
+                                                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400">
+                                                        <i data-lucide="chevrons-up-down" className="w-4 h-4"></i>
+                                                    </span>
+                                                </div>
+                                            </label>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <Field label="Nom" value={currentClient.nom} onChange={e => setCurrentClient({...currentClient, nom: e.target.value})} />
+                                                <Field label="Prénom" value={currentClient.prenom} onChange={e => setCurrentClient({...currentClient, prenom: e.target.value})} />
+                                            </div>
+                                            <Field label="Téléphone" type="tel" value={currentClient.telephone} onChange={e => setCurrentClient({...currentClient, telephone: e.target.value})} />
+                                            <Field label="Email" type="email" value={currentClient.email} onChange={e => setCurrentClient({...currentClient, email: e.target.value})} />
+                                            <Field label="Adresse du bien" value={currentClient.adresse} onChange={e => setCurrentClient({...currentClient, adresse: e.target.value})} />
+                                        </>
+                                    )}
+
+                                    {activeTab === 'bien' && (
+                                        <>
+                                            <SectionTitle icon="ruler" title="Le bien" subtitle="Surfaces et distribution" />
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <Field label="Habitable (m²)" type="number" value={currentClient.surfaceHabitable} onChange={e => setCurrentClient({...currentClient, surfaceHabitable: e.target.value})} />
+                                                <Field label="Carrez (m²)" type="number" value={currentClient.surfaceCarrez} onChange={e => setCurrentClient({...currentClient, surfaceCarrez: e.target.value})} />
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-3">
+                                                <Field label="Pièces" type="number" value={currentClient.distribution.pieces} onChange={e => setCurrentClient({...currentClient, distribution: {...currentClient.distribution, pieces: e.target.value}})} />
+                                                <Field label="Chambres" type="number" value={currentClient.distribution.chambres} onChange={e => setCurrentClient({...currentClient, distribution: {...currentClient.distribution, chambres: e.target.value}})} />
+                                                <Field label="SDB" type="number" value={currentClient.distribution.sainte} onChange={e => setCurrentClient({...currentClient, distribution: {...currentClient.distribution, sainte: e.target.value}})} />
+                                            </div>
+                                            <Field label="Terrasse / Balcon (m²)" value={currentClient.annexes.terrasse} onChange={e => setCurrentClient({...currentClient, annexes: {...currentClient.annexes, terrasse: e.target.value}})} />
+                                        </>
+                                    )}
+
+                                    {activeTab === 'technique' && (
+                                        <>
+                                            <SectionTitle icon="wrench" title="Technique" subtitle="Équipements et état général" />
+                                            <Field label="Chauffage & Climatisation" value={currentClient.chauffage.type} onChange={e => setCurrentClient({...currentClient, chauffage: {...currentClient.chauffage, type: e.target.value}})} />
+                                            <div className="mb-4">
+                                                <span className="block text-[11px] font-medium uppercase tracking-[0.14em] text-stone-500 mb-2 ml-0.5">Équipements</span>
+                                                <div className="rounded-2xl border border-stone-200/80 dark:border-white/[0.08] bg-white/50 dark:bg-white/[0.02] divide-y divide-stone-200/70 dark:divide-white/[0.06]">
+                                                    <label className="flex items-center justify-between px-4 h-14 cursor-pointer">
+                                                        <span className="flex items-center gap-3 text-[15px]"><i data-lucide="chef-hat" className="w-4 h-4 text-stone-400"></i>Cuisine équipée</span>
+                                                        <input type="checkbox" className="peer sr-only" checked={currentClient.equipements.cuisineEquipee} onChange={e => setCurrentClient({...currentClient, equipements: {...currentClient.equipements, cuisineEquipee: e.target.checked}})} />
+                                                        <span aria-hidden="true" className="relative w-11 h-6 rounded-full bg-stone-300 dark:bg-white/10 transition-colors peer-checked:bg-accent peer-focus-visible:ring-4 peer-focus-visible:ring-accent/25 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-5"></span>
+                                                    </label>
+                                                    <label className="flex items-center justify-between px-4 h-14 cursor-pointer">
+                                                        <span className="flex items-center gap-3 text-[15px]"><i data-lucide="car" className="w-4 h-4 text-stone-400"></i>Stationnement</span>
+                                                        <input type="checkbox" className="peer sr-only" checked={currentClient.equipements.stationnement} onChange={e => setCurrentClient({...currentClient, equipements: {...currentClient.equipements, stationnement: e.target.checked}})} />
+                                                        <span aria-hidden="true" className="relative w-11 h-6 rounded-full bg-stone-300 dark:bg-white/10 transition-colors peer-checked:bg-accent peer-focus-visible:ring-4 peer-focus-visible:ring-accent/25 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-5"></span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <label className="flex flex-col group">
+                                                <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-stone-500 mb-2 ml-0.5 group-focus-within:text-accent transition-colors">État (fissures, etc.)</span>
+                                                <textarea className="w-full p-4 rounded-2xl text-[15px] leading-relaxed bg-white/70 dark:bg-white/[0.04] border border-stone-200/80 dark:border-white/[0.08] text-stone-900 dark:text-stone-100 outline-none resize-none transition-all focus:border-accent/70 focus:ring-4 focus:ring-accent/15" rows="3" value={currentClient.etat.notesEtat} onChange={e => setCurrentClient({...currentClient, etat: {...currentClient.etat, notesEtat: e.target.value}})}></textarea>
+                                            </label>
+                                        </>
+                                    )}
+
+                                    {activeTab === 'financier' && (
+                                        <>
+                                            <SectionTitle icon="wallet" title="Financier" subtitle="Charges et projet de vente" />
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <Field label="Taxe foncière (€)" type="number" value={currentClient.charges.fonciere} onChange={e => setCurrentClient({...currentClient, charges: {...currentClient.charges, fonciere: e.target.value}})} />
+                                                <Field label="Copro (€/mois)" type="number" value={currentClient.charges.copro} onChange={e => setCurrentClient({...currentClient, charges: {...currentClient.charges, copro: e.target.value}})} />
+                                            </div>
+                                            <div className="h-px my-2 mb-5 bg-stone-200/70 dark:bg-white/[0.06]"></div>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <Field label="Délai" value={currentClient.projet.delai} onChange={e => setCurrentClient({...currentClient, projet: {...currentClient.projet, delai: e.target.value}})} />
+                                                <Field label="Prix attendu (€)" type="number" value={currentClient.projet.prixAttendu} onChange={e => setCurrentClient({...currentClient, projet: {...currentClient.projet, prixAttendu: e.target.value}})} />
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {activeTab === 'medias' && (
+                                        <div>
+                                            <SectionTitle icon="images" title="Médias" subtitle={`${currentClient.medias.length} photo${currentClient.medias.length > 1 ? 's' : ''} jointe${currentClient.medias.length > 1 ? 's' : ''}`} />
+                                            <input id="camera-input" type="file" accept="image/jpeg, image/png, image/jpg" capture="camera" onChange={handleMediaUpload} className="hidden" />
+                                            <input id="gallery-input" type="file" accept="image/*" multiple onChange={handleMediaUpload} className="hidden" />
+                                            <div className="grid grid-cols-2 gap-3 mb-4">
+                                                <button onClick={triggerCamera} type="button" className="flex flex-col items-center justify-center gap-2 h-28 rounded-2xl bg-stone-900 dark:bg-white text-white dark:text-ink-900 active:scale-[0.98] transition-transform">
+                                                    <span className="flex items-center justify-center w-10 h-10 rounded-full bg-accent text-ink-900">
+                                                        <i data-lucide="camera" className="w-5 h-5"></i>
+                                                    </span>
+                                                    <span className="text-xs font-medium">Photo</span>
+                                                </button>
+                                                <button onClick={triggerGallery} type="button" className="flex flex-col items-center justify-center gap-2 h-28 rounded-2xl border border-dashed border-stone-300 dark:border-white/15 bg-white/40 dark:bg-white/[0.02] text-stone-600 dark:text-stone-300 active:scale-[0.98] transition-transform">
+                                                    <span className="flex items-center justify-center w-10 h-10 rounded-full bg-stone-900/5 dark:bg-white/[0.06]">
+                                                        <i data-lucide="image" className="w-5 h-5"></i>
+                                                    </span>
+                                                    <span className="text-xs font-medium">Galerie</span>
+                                                </button>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-2">
+                                                {currentClient.medias.map((m, i) => (
+                                                    <div key={i} className="aspect-square rounded-2xl overflow-hidden relative bg-stone-200 dark:bg-white/[0.04] ring-1 ring-stone-900/5 dark:ring-white/[0.06]">
+                                                        <img src={m.url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                                                        <button aria-label={`Supprimer la photo ${i + 1}`} onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const n = [...currentClient.medias]; n.splice(i, 1);
+                                                            setCurrentClient({...currentClient, medias: n});
+                                                        }} className="absolute top-1.5 right-1.5 flex items-center justify-center w-7 h-7 rounded-full bg-black/50 backdrop-blur-md text-white border border-white/20 hover:bg-red-500 transition-colors">
+                                                            <i data-lucide="x" className="w-3.5 h-3.5"></i>
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                <div className="fixed bottom-0 inset-x-0 z-30 max-w-md mx-auto px-4 pb-4 pt-3">
+                                    <div className={`flex gap-2 p-2 rounded-3xl border border-stone-200/70 dark:border-white/[0.07] backdrop-blur-2xl bg-white/80 dark:bg-ink-800/70 shadow-2xl shadow-black/10 dark:shadow-black/50`}>
+                                        <button onClick={abandonDraft} className="flex-1 h-12 rounded-2xl text-sm font-medium text-stone-500 dark:text-stone-400 hover:bg-stone-900/5 dark:hover:bg-white/[0.06] transition-colors">
+                                            Annuler
+                                        </button>
+                                        <button onClick={handleSave} className="flex-[2] h-12 rounded-2xl bg-accent text-ink-900 text-sm font-semibold flex items-center justify-center gap-2 shadow-lg shadow-accent/25 active:scale-[0.98] transition-transform">
+                                            <i data-lucide="check" className="w-4 h-4"></i><span>Enregistrer</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </main>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
