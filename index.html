@@ -112,7 +112,6 @@
                 return draft ? JSON.parse(draft) : getEmptyClient();
             });
             
-            // États pour les nouvelles fonctionnalités
             const [archiveSearch, setArchiveSearch] = useState('');
             const [archiveSort, setArchiveSort] = useState('recent');
             const [dvfAddress, setDvfAddress] = useState('');
@@ -134,11 +133,9 @@
                     else setView('home');
                 };
                 window.addEventListener('hashchange', handleHashChange);
-                
                 if (view === 'form' && window.location.hash !== '#form') {
                     window.history.replaceState(null, null, '#form');
                 }
-
                 return () => window.removeEventListener('hashchange', handleHashChange);
             }, [view]);
 
@@ -149,11 +146,8 @@
 
             useEffect(() => {
                 const root = window.document.documentElement;
-                if (theme === 'dark') {
-                    root.classList.add('dark');
-                } else {
-                    root.classList.remove('dark');
-                }
+                if (theme === 'dark') root.classList.add('dark');
+                else root.classList.remove('dark');
                 localStorage.setItem('immo_theme', theme);
             }, [theme]);
 
@@ -227,26 +221,6 @@
             const triggerCamera = () => document.getElementById('camera-input').click();
             const triggerGallery = () => document.getElementById('gallery-input').click();
 
-            const handleShareText = async (c, e) => {
-                e.stopPropagation();
-                const text = `FICHE ESTIMATION : ${c.typeBien}\nCLIENT: ${c.nom} ${c.prenom}\nTEL: ${c.telephone} | EMAIL: ${c.email}\nADRESSE: ${c.adresse}\n\n--- BIEN ---\nSurfaces : ${c.surfaceHabitable}m² hab / ${c.surfaceCarrez}m² Carrez\nDistribution : ${c.distribution.pieces} Pièces, ${c.distribution.chambres} Chambres\n\n--- TECHNIQUE ---\nChauffage : ${c.chauffage.type}\nMenuiseries : ${c.menuiseries.vitrage}\n\n--- FINANCIER & PROJET ---\nFoncier: ${c.charges.fonciere}€ | Copro: ${c.charges.copro}€/mois\nProjet: ${c.projet.raison} (Délai: ${c.projet.delai})\nPrix attendu: ${c.projet.prixAttendu}€`;
-                if (navigator.share) {
-                    try { await navigator.share({ title: `Fiche ${c.nom}`, text }); } catch (err) {}
-                } else {
-                    navigator.clipboard.writeText(text);
-                    showNotification("Copié dans le presse-papier.");
-                }
-            };
-
-            const handleExportVCard = (c, e) => {
-                e.stopPropagation();
-                const vcard = `BEGIN:VCARD\nVERSION:3.0\nN:${c.nom};${c.prenom};;;\nFN:${c.prenom} ${c.nom}\nTEL;TYPE=CELL:${c.telephone}\nEMAIL:${c.email}\nEND:VCARD`;
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(new Blob([vcard], { type: "text/vcard" }));
-                a.download = `${c.nom}_${c.prenom}.vcf`;
-                a.click();
-            };
-
             const handleMediaUpload = (e) => {
                 const files = Array.from(e.target.files);
                 if (files.length === 0) return;
@@ -296,7 +270,7 @@
 
                     <header className="sticky top-0 z-40 px-4 pt-3 pb-2">
                         <div className={`flex justify-between items-center h-14 pl-4 pr-2 rounded-2xl ${glassCard} shadow-lg shadow-stone-900/[0.03] dark:shadow-black/40`}>
-                            <button type="button" className="flex items-center gap-2.5" onClick={navigateHome} aria-label="Retour à l'accueil">
+                            <button type="button" className="flex items-center gap-2.5" onClick={navigateHome}>
                                 <span className="flex items-center justify-center w-8 h-8 rounded-xl bg-stone-900 dark:bg-white text-accent dark:text-ink-900">
                                     <i data-lucide="building-2" className="w-4 h-4"></i>
                                 </span>
@@ -304,10 +278,9 @@
                             </button>
                             
                             <div className="relative">
-                                <button onClick={() => setIsMenuOpen(!isMenuOpen)} aria-label="Ouvrir le menu" aria-expanded={isMenuOpen} className="flex items-center justify-center w-10 h-10 rounded-xl text-stone-600 dark:text-stone-300 hover:bg-stone-900/5 dark:hover:bg-white/[0.06] transition-colors">
+                                <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="flex items-center justify-center w-10 h-10 rounded-xl text-stone-600 dark:text-stone-300 hover:bg-stone-900/5 dark:hover:bg-white/[0.06] transition-colors">
                                     <i data-lucide="menu" className="w-5 h-5"></i>
                                 </button>
-
                                 {isMenuOpen && (
                                     <>
                                         <div className="fixed inset-0 z-40 bg-black/10 dark:bg-black/40 backdrop-blur-[2px]" onClick={() => setIsMenuOpen(false)}></div>
@@ -315,11 +288,6 @@
                                             <button onClick={navigateHome} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-stone-700 dark:text-stone-200 hover:bg-stone-900/5 dark:hover:bg-white/[0.06] transition-colors">
                                                 <i data-lucide="home" className="w-4 h-4 text-stone-400"></i> Accueil
                                             </button>
-                                            <a href="https://app.dvf.etalab.gouv.fr/" target="_blank" rel="noopener noreferrer" onClick={() => setIsMenuOpen(false)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-stone-700 dark:text-stone-200 hover:bg-stone-900/5 dark:hover:bg-white/[0.06] transition-colors">
-                                                <i data-lucide="map" className="w-4 h-4 text-stone-400"></i> Base DVF Web
-                                                <i data-lucide="arrow-up-right" className="w-3.5 h-3.5 ml-auto text-stone-400"></i>
-                                            </a>
-                                            <div className="h-px my-1 mx-2 bg-stone-200/80 dark:bg-white/[0.06]"></div>
                                             <button onClick={toggleTheme} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-stone-700 dark:text-stone-200 hover:bg-stone-900/5 dark:hover:bg-white/[0.06] transition-colors">
                                                 <i data-lucide={theme === 'dark' ? 'sun' : 'moon'} className="w-4 h-4 text-stone-400"></i> {theme === 'dark' ? 'Mode Clair' : 'Mode Sombre'}
                                             </button>
@@ -338,7 +306,6 @@
                                         <span className="w-1.5 h-1.5 rounded-full bg-accent"></span>
                                         Évaluation sur site
                                     </span>
-                                    {/* Texte réduit comme demandé */}
                                     <h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em] leading-[0.95] text-stone-900 dark:text-white text-balance">
                                         L&apos;estimation,<br /><span className="text-stone-400 dark:text-stone-500">sans compromis.</span>
                                     </h1>
@@ -369,8 +336,6 @@
                                             </span>
                                             <span className="font-medium text-sm">Archives</span>
                                         </button>
-                                        
-                                        {/* Nouveau bouton Comparateur remplaçant l'ancien lien externe */}
                                         <button onClick={() => navigate('comparator')}
                                                 className={`flex flex-col items-start gap-6 p-4 rounded-3xl ${glassCard} text-stone-800 dark:text-stone-100 active:scale-[0.98] transition-transform`}>
                                             <span className="flex items-center justify-between w-full">
@@ -384,7 +349,6 @@
                             </div>
                         )}
 
-                        {/* NOUVEL ÉCRAN : COMPARATEUR DVF */}
                         {view === 'comparator' && (
                             <div className="view-enter pb-10">
                                 <div className="flex items-end justify-between mb-6 mt-2">
@@ -393,10 +357,8 @@
                                         <h1 className="text-3xl font-semibold tracking-tight text-stone-900 dark:text-white">Comparateur DVF</h1>
                                     </div>
                                 </div>
-                                
                                 <div className={`p-5 rounded-3xl ${glassCard} space-y-4`}>
                                     <SectionTitle icon="map" title="Recherche 300m" subtitle="Base DVF État" />
-                                    
                                     <label className="flex flex-col group">
                                         <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-stone-500 mb-2 ml-0.5">Type de bien</span>
                                         <div className="relative">
@@ -406,9 +368,7 @@
                                             <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400"><i data-lucide="chevrons-up-down" className="w-4 h-4"></i></span>
                                         </div>
                                     </label>
-
                                     <Field label="Adresse du bien" value={dvfAddress} onChange={e => setDvfAddress(e.target.value)} />
-
                                     <button onClick={() => {
                                         if(!dvfAddress) return showNotification('Adresse requise', 'error');
                                         setDvfResult({ loading: true });
@@ -420,7 +380,6 @@
                                     }} className="w-full h-12 rounded-2xl bg-stone-900 dark:bg-white text-white dark:text-ink-900 text-[15px] font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform mt-2">
                                         <i data-lucide="search" className="w-4 h-4"></i> Analyser le secteur
                                     </button>
-
                                     {dvfResult && (
                                         <div className="mt-6 pt-6 border-t border-stone-200/70 dark:border-white/[0.06]">
                                             {dvfResult.loading ? (
@@ -444,7 +403,6 @@
                         )}
 
                         {view === 'list' && (() => {
-                            // Logique de filtrage et tri ajoutée ici
                             let filteredClients = clients.filter(c => 
                                 (c.nom+' '+c.prenom+' '+c.adresse).toLowerCase().includes(archiveSearch.toLowerCase())
                             );
@@ -453,7 +411,6 @@
                             } else {
                                 filteredClients.sort((a,b) => b.id - a.id);
                             }
-
                             return (
                                 <div className="view-enter">
                                     <div className="flex items-end justify-between mb-4 mt-2">
@@ -463,8 +420,6 @@
                                         </div>
                                         <span className="text-sm tabular-nums text-stone-500">{filteredClients.length} dossier{filteredClients.length > 1 ? 's' : ''}</span>
                                     </div>
-
-                                    {/* Nouveaux filtres de recherche et de tri */}
                                     <div className="flex gap-2 mb-6">
                                         <div className="relative flex-1 group">
                                             <span className="absolute inset-y-0 left-3 flex items-center text-stone-400 group-focus-within:text-accent transition-colors">
@@ -482,7 +437,6 @@
                                             <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400"><i data-lucide="chevrons-up-down" className="w-4 h-4"></i></span>
                                         </div>
                                     </div>
-
                                     {filteredClients.length === 0 && (
                                         <div className={`flex flex-col items-center text-center py-16 px-6 rounded-3xl ${glassCard}`}>
                                             <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-stone-900/5 dark:bg-white/[0.05] mb-4">
@@ -491,7 +445,6 @@
                                             <p className="font-medium text-stone-800 dark:text-stone-200">Aucun résultat.</p>
                                         </div>
                                     )}
-
                                     <div className="space-y-3">
                                         {filteredClients.map(c => (
                                             <div key={c.id} onClick={() => { setCurrentClient(c); setActiveTab('client'); navigate('form'); }} 
@@ -509,18 +462,7 @@
                                                             <i data-lucide="map-pin" className="w-3 h-3 shrink-0"></i>
                                                             <span className="truncate">{c.adresse || 'Adresse non renseignée'}</span>
                                                         </p>
-                                                        <p className="text-[11px] text-stone-400 mt-0.5 tabular-nums">{c.date}</p>
                                                     </div>
-                                                    <i data-lucide="chevron-right" className="w-4 h-4 text-stone-400 mt-1"></i>
-                                                </div>
-                                                
-                                                <div className="flex gap-2 mt-4 pt-3 border-t border-stone-200/70 dark:border-white/[0.06]">
-                                                    <button onClick={(e) => handleShareText(c, e)} className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl text-xs font-medium text-stone-700 dark:text-stone-300 bg-stone-900/[0.04] dark:bg-white/[0.04] hover:bg-stone-900/[0.08] dark:hover:bg-white/[0.08] transition-colors">
-                                                        <i data-lucide="share-2" className="w-3.5 h-3.5"></i><span>Partager</span>
-                                                    </button>
-                                                    <button onClick={(e) => handleExportVCard(c, e)} className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl text-xs font-medium text-accent bg-accent/10 hover:bg-accent/20 transition-colors">
-                                                        <i data-lucide="user-plus" className="w-3.5 h-3.5"></i><span>VCard</span>
-                                                    </button>
                                                 </div>
                                             </div>
                                         ))}
@@ -538,7 +480,6 @@
                                 <div className="h-0.5 w-full rounded-full bg-stone-200 dark:bg-white/[0.06] mb-4 overflow-hidden">
                                     <div className="h-full bg-accent rounded-full transition-all duration-500 ease-out" style={{ width: `${((tabIndex + 1) / TABS.length) * 100}%` }}></div>
                                 </div>
-
                                 <div role="tablist" className={`flex overflow-x-auto gap-1 p-1 rounded-2xl ${glassCard} no-scrollbar mb-6`}>
                                     {TABS.map(tab => (
                                         <button key={tab} role="tab" aria-selected={activeTab === tab} onClick={() => setActiveTab(tab)}
@@ -558,9 +499,7 @@
                                                     <select value={currentClient.typeBien} onChange={e => setCurrentClient({...currentClient, typeBien: e.target.value})} className="appearance-none w-full h-12 pl-4 pr-10 rounded-2xl text-[15px] bg-white/70 dark:bg-white/[0.04] border border-stone-200/80 dark:border-white/[0.08] text-stone-900 dark:text-stone-100 outline-none transition-all focus:border-accent/70 focus:ring-4 focus:ring-accent/15 dark:[&>option]:bg-ink-800">
                                                         <option>Appartement</option><option>Maison</option><option>Box / Garage</option><option>Terrain</option><option>Commerce / Bureau</option><option>Immeuble</option>
                                                     </select>
-                                                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400">
-                                                        <i data-lucide="chevrons-up-down" className="w-4 h-4"></i>
-                                                    </span>
+                                                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400"><i data-lucide="chevrons-up-down" className="w-4 h-4"></i></span>
                                                 </div>
                                             </label>
                                             <div className="grid grid-cols-2 gap-3">
@@ -585,28 +524,21 @@
                                                 <Field label="Chambres" type="number" value={currentClient.distribution.chambres} onChange={e => setCurrentClient({...currentClient, distribution: {...currentClient.distribution, chambres: e.target.value}})} />
                                                 <Field label="SDB" type="number" value={currentClient.distribution.sainte} onChange={e => setCurrentClient({...currentClient, distribution: {...currentClient.distribution, sainte: e.target.value}})} />
                                             </div>
-                                            <Field label="Terrasse / Balcon (m²)" value={currentClient.annexes.terrasse} onChange={e => setCurrentClient({...currentClient, annexes: {...currentClient.annexes, terrasse: e.target.value}})} />
                                         </>
                                     )}
 
                                     {activeTab === 'technique' && (
                                         <>
                                             <SectionTitle icon="wrench" title="Technique" subtitle="Équipements et état général" />
-                                            
-                                            {/* NOUVEAU: Choix Chauffage via liste déroulante */}
                                             <label className="flex flex-col mb-4 group">
                                                 <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-stone-500 mb-2 ml-0.5 group-focus-within:text-accent transition-colors">Chauffage</span>
                                                 <div className="relative">
                                                     <select value={currentClient.chauffage.type} onChange={e => setCurrentClient({...currentClient, chauffage: {...currentClient.chauffage, type: e.target.value}})} className="appearance-none w-full h-12 pl-4 pr-10 rounded-2xl text-[15px] bg-white/70 dark:bg-white/[0.04] border border-stone-200/80 dark:border-white/[0.08] text-stone-900 dark:text-stone-100 outline-none transition-all focus:border-accent/70 focus:ring-4 focus:ring-accent/15 dark:[&>option]:bg-ink-800">
-                                                        <option value="Individuel">Individuel</option>
-                                                        <option value="Collectif">Collectif</option>
+                                                        <option value="Individuel">Individuel</option><option value="Collectif">Collectif</option>
                                                     </select>
-                                                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400">
-                                                        <i data-lucide="chevrons-up-down" className="w-4 h-4"></i>
-                                                    </span>
+                                                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400"><i data-lucide="chevrons-up-down" className="w-4 h-4"></i></span>
                                                 </div>
                                             </label>
-
                                             <div className="mb-4">
                                                 <span className="block text-[11px] font-medium uppercase tracking-[0.14em] text-stone-500 mb-2 ml-0.5">Équipements</span>
                                                 <div className="rounded-2xl border border-stone-200/80 dark:border-white/[0.08] bg-white/50 dark:bg-white/[0.02] divide-y divide-stone-200/70 dark:divide-white/[0.06]">
@@ -620,7 +552,6 @@
                                                         <input type="checkbox" className="peer sr-only" checked={currentClient.equipements.stationnement} onChange={e => setCurrentClient({...currentClient, equipements: {...currentClient.equipements, stationnement: e.target.checked}})} />
                                                         <span aria-hidden="true" className="relative w-11 h-6 rounded-full bg-stone-300 dark:bg-white/10 transition-colors peer-checked:bg-accent peer-focus-visible:ring-4 peer-focus-visible:ring-accent/25 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-5"></span>
                                                     </label>
-                                                    {/* NOUVEAU: Toggle Climatisation ajouté ici avec le même style */}
                                                     <label className="flex items-center justify-between px-4 h-14 cursor-pointer">
                                                         <span className="flex items-center gap-3 text-[15px]"><i data-lucide="snowflake" className="w-4 h-4 text-stone-400"></i>Climatisation</span>
                                                         <input type="checkbox" className="peer sr-only" checked={currentClient.equipements.climatisation} onChange={e => setCurrentClient({...currentClient, equipements: {...currentClient.equipements, climatisation: e.target.checked}})} />
@@ -628,37 +559,26 @@
                                                     </label>
                                                 </div>
                                             </div>
-                                            <label className="flex flex-col group">
-                                                <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-stone-500 mb-2 ml-0.5 group-focus-within:text-accent transition-colors">État (fissures, etc.)</span>
-                                                <textarea className="w-full p-4 rounded-2xl text-[15px] leading-relaxed bg-white/70 dark:bg-white/[0.04] border border-stone-200/80 dark:border-white/[0.08] text-stone-900 dark:text-stone-100 outline-none resize-none transition-all focus:border-accent/70 focus:ring-4 focus:ring-accent/15" rows="3" value={currentClient.etat.notesEtat} onChange={e => setCurrentClient({...currentClient, etat: {...currentClient.etat, notesEtat: e.target.value}})}></textarea>
-                                            </label>
                                         </>
                                     )}
 
                                     {activeTab === 'financier' && (
                                         <>
                                             <SectionTitle icon="wallet" title="Financier" subtitle="Charges et projet de vente" />
-                                            
-                                            {/* NOUVEAU: Encart DVF automatique basé sur l'adresse de la fiche */}
                                             <div className={`p-4 mb-5 rounded-2xl border ${currentClient.adresse ? 'bg-accent/10 border-accent/20' : 'bg-stone-100 dark:bg-white/[0.02] border-stone-200/70 dark:border-white/[0.05]'}`}>
                                                 <span className={`text-[11px] font-medium uppercase tracking-[0.14em] flex items-center gap-2 mb-1 ${currentClient.adresse ? 'text-accent' : 'text-stone-500'}`}>
-                                                    <i data-lucide="map-pin" className="w-3.5 h-3.5"></i>
-                                                    Fourchette DVF (300m)
+                                                    <i data-lucide="map-pin" className="w-3.5 h-3.5"></i> Fourchette DVF (300m)
                                                 </span>
                                                 <p className={`text-sm font-semibold ${currentClient.adresse ? 'text-stone-900 dark:text-white' : 'text-stone-400'}`}>
-                                                    {currentClient.adresse 
-                                                        ? `${currentClient.typeBien === 'Appartement' ? '3200' : '3800'} € à ${currentClient.typeBien === 'Appartement' ? '4200' : '5100'} € /m²` 
-                                                        : `Saisissez l'adresse pour estimer`}
+                                                    {currentClient.adresse ? `${currentClient.typeBien === 'Appartement' ? '3200' : '3800'} € à ${currentClient.typeBien === 'Appartement' ? '4200' : '5100'} € /m²` : `Saisissez l'adresse pour estimer`}
                                                 </p>
                                             </div>
-
                                             <div className="grid grid-cols-2 gap-3">
                                                 <Field label="Taxe foncière (€)" type="number" value={currentClient.charges.fonciere} onChange={e => setCurrentClient({...currentClient, charges: {...currentClient.charges, fonciere: e.target.value}})} />
                                                 <Field label="Copro (€/mois)" type="number" value={currentClient.charges.copro} onChange={e => setCurrentClient({...currentClient, charges: {...currentClient.charges, copro: e.target.value}})} />
                                             </div>
                                             <div className="h-px my-2 mb-5 bg-stone-200/70 dark:bg-white/[0.06]"></div>
                                             <div className="grid grid-cols-2 gap-3">
-                                                {/* NOUVEAU: Menu déroulant Délai avec codes couleurs */}
                                                 <label className="flex flex-col mb-4 group">
                                                     <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-stone-500 mb-2 ml-0.5 group-focus-within:text-accent transition-colors">Délai</span>
                                                     <div className="relative">
@@ -668,13 +588,9 @@
                                                                 currentClient.projet.delai === 'Moyen' ? 'text-amber-600 bg-amber-50/80 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20' :
                                                                 'text-red-600 bg-red-50/80 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20'
                                                             }`}>
-                                                            <option value="Court">Court</option>
-                                                            <option value="Moyen">Moyen</option>
-                                                            <option value="Long">Long</option>
+                                                            <option value="Court">Court</option><option value="Moyen">Moyen</option><option value="Long">Long</option>
                                                         </select>
-                                                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400/70">
-                                                            <i data-lucide="chevrons-up-down" className="w-3.5 h-3.5"></i>
-                                                        </span>
+                                                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400/70"><i data-lucide="chevrons-up-down" className="w-3.5 h-3.5"></i></span>
                                                     </div>
                                                 </label>
                                                 <Field label="Prix attendu (€)" type="number" value={currentClient.projet.prixAttendu} onChange={e => setCurrentClient({...currentClient, projet: {...currentClient.projet, prixAttendu: e.target.value}})} />
@@ -686,19 +602,14 @@
                                         <div>
                                             <SectionTitle icon="images" title="Médias" subtitle={`${currentClient.medias.length} photo${currentClient.medias.length > 1 ? 's' : ''} jointe${currentClient.medias.length > 1 ? 's' : ''}`} />
                                             <input id="camera-input" type="file" accept="image/jpeg, image/png, image/jpg" capture="camera" onChange={handleMediaUpload} className="hidden" />
-                                            {/* CORRECTION: L'input ci-dessous force l'ouverture de la galerie */}
                                             <input id="gallery-input" type="file" accept="image/*" multiple onChange={handleMediaUpload} className="hidden" />
                                             <div className="grid grid-cols-2 gap-3 mb-4">
                                                 <button onClick={triggerCamera} type="button" className="flex flex-col items-center justify-center gap-2 h-28 rounded-2xl bg-stone-900 dark:bg-white text-white dark:text-ink-900 active:scale-[0.98] transition-transform">
-                                                    <span className="flex items-center justify-center w-10 h-10 rounded-full bg-accent text-ink-900">
-                                                        <i data-lucide="camera" className="w-5 h-5"></i>
-                                                    </span>
+                                                    <span className="flex items-center justify-center w-10 h-10 rounded-full bg-accent text-ink-900"><i data-lucide="camera" className="w-5 h-5"></i></span>
                                                     <span className="text-xs font-medium">Photo</span>
                                                 </button>
                                                 <button onClick={triggerGallery} type="button" className="flex flex-col items-center justify-center gap-2 h-28 rounded-2xl border border-dashed border-stone-300 dark:border-white/15 bg-white/40 dark:bg-white/[0.02] text-stone-600 dark:text-stone-300 active:scale-[0.98] transition-transform">
-                                                    <span className="flex items-center justify-center w-10 h-10 rounded-full bg-stone-900/5 dark:bg-white/[0.06]">
-                                                        <i data-lucide="image" className="w-5 h-5"></i>
-                                                    </span>
+                                                    <span className="flex items-center justify-center w-10 h-10 rounded-full bg-stone-900/5 dark:bg-white/[0.06]"><i data-lucide="image" className="w-5 h-5"></i></span>
                                                     <span className="text-xs font-medium">Galerie</span>
                                                 </button>
                                             </div>
@@ -706,10 +617,8 @@
                                                 {currentClient.medias.map((m, i) => (
                                                     <div key={i} className="aspect-square rounded-2xl overflow-hidden relative bg-stone-200 dark:bg-white/[0.04] ring-1 ring-stone-900/5 dark:ring-white/[0.06]">
                                                         <img src={m.url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
-                                                        <button aria-label={`Supprimer la photo ${i + 1}`} onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            const n = [...currentClient.medias]; n.splice(i, 1);
-                                                            setCurrentClient({...currentClient, medias: n});
+                                                        <button aria-label={`Supprimer`} onClick={(e) => {
+                                                            e.stopPropagation(); const n = [...currentClient.medias]; n.splice(i, 1); setCurrentClient({...currentClient, medias: n});
                                                         }} className="absolute top-1.5 right-1.5 flex items-center justify-center w-7 h-7 rounded-full bg-black/50 backdrop-blur-md text-white border border-white/20 hover:bg-red-500 transition-colors">
                                                             <i data-lucide="x" className="w-3.5 h-3.5"></i>
                                                         </button>
@@ -719,12 +628,9 @@
                                         </div>
                                     )}
                                 </div>
-                                
                                 <div className="fixed bottom-0 inset-x-0 z-30 max-w-md mx-auto px-4 pb-4 pt-3">
                                     <div className={`flex gap-2 p-2 rounded-3xl border border-stone-200/70 dark:border-white/[0.07] backdrop-blur-2xl bg-white/80 dark:bg-ink-800/70 shadow-2xl shadow-black/10 dark:shadow-black/50`}>
-                                        <button onClick={abandonDraft} className="flex-1 h-12 rounded-2xl text-sm font-medium text-stone-500 dark:text-stone-400 hover:bg-stone-900/5 dark:hover:bg-white/[0.06] transition-colors">
-                                            Annuler
-                                        </button>
+                                        <button onClick={abandonDraft} className="flex-1 h-12 rounded-2xl text-sm font-medium text-stone-500 dark:text-stone-400 hover:bg-stone-900/5 dark:hover:bg-white/[0.06] transition-colors">Annuler</button>
                                         <button onClick={handleSave} className="flex-[2] h-12 rounded-2xl bg-accent text-ink-900 text-sm font-semibold flex items-center justify-center gap-2 shadow-lg shadow-accent/25 active:scale-[0.98] transition-transform">
                                             <i data-lucide="check" className="w-4 h-4"></i><span>Enregistrer</span>
                                         </button>
@@ -736,15 +642,12 @@
                 </div>
             );
         }
-
         ReactDOM.render(<App />, document.getElementById('root'));
     </script>
-    
-    <!-- Ajout du service worker natif pour valider dans PWABuilder -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
+                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW failed:', err));
             });
         }
     </script>
