@@ -1,22 +1,15 @@
 {
-  "name": "Estimo",
+  "name": "Estimo V2",
   "short_name": "Estimo",
-  "start_url": ".",
+  "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#0a0a0b",
-  "theme_color": "#c9a96e",
+  "background_color": "#f8fafc",
+  "theme_color": "#2563eb",
   "icons": [
     {
-      "src": "https://raw.githubusercontent.com/marcfontalirand-prog/Estimo/main/icon-192.png",
+      "src": "icon-192.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "https://raw.githubusercontent.com/marcfontalirand-prog/Estimo/main/icon-192.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     }
   ]
 }
