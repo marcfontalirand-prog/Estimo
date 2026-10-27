@@ -7,6 +7,12 @@
   "theme_color": "#c9a96e",
   "icons": [
     {
+      "src": "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=192&h=192&fit=crop",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
       "src": "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=512&h=512&fit=crop",
       "sizes": "512x512",
       "type": "image/jpeg",
