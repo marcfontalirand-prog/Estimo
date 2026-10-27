@@ -7,15 +7,15 @@
   "theme_color": "#c9a96e",
   "icons": [
     {
-      "src": "https://cdn.jsdelivr.net/gh/lucide-icons/lucide@latest/icons/building-2.png",
+      "src": "https://raw.githubusercontent.com/marcfontalirand-prog/Estimo/main/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=512&h=512&fit=crop",
+      "src": "https://raw.githubusercontent.com/marcfontalirand-prog/Estimo/main/icon-192.png",
       "sizes": "512x512",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]
