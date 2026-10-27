@@ -28,7 +28,6 @@
         .view-enter { animation: scaleIn 0.3s ease-out forwards; }
         @keyframes scaleIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
         
-        /* Ajustement natif pour le picker date/heure sur mobile */
         input[type="datetime-local"]::-webkit-calendar-picker-indicator { 
             filter: invert(0.5); 
             cursor: pointer;
@@ -84,10 +83,10 @@
             };
         }
 
-        // BOUCLIER DE PROTECTION DES DONNÉES : Met à jour les vieilles sauvegardes sans planter
+        // BOUCLIER ULTRA-ROBUSTE
         function hydrateClient(data) {
             const base = getEmptyClient();
-            if (!data) return base;
+            if (!data || typeof data !== 'object') return base;
             return {
                 ...base,
                 ...data,
@@ -107,6 +106,14 @@
             };
         }
 
+        // FORMATAGE SÉCURISÉ DES DATES
+        function formatRdvDate(dateStr) {
+            if (!dateStr) return 'Date non définie';
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return 'Date invalide';
+            return d.toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+        }
+
         function App() {
             const [view, setView] = useState(() => {
                 const hash = window.location.hash.replace('#', '');
@@ -116,18 +123,25 @@
                 return localStorage.getItem('immo_draft') ? 'form' : 'home';
             }); 
             
+            // LECTURE SÉCURISÉE DE LA MÉMOIRE LOCALE
             const [clients, setClients] = useState(() => {
                 const saved = localStorage.getItem('immo_clients');
                 if (!saved) return [];
                 try {
-                    return JSON.parse(saved).map(hydrateClient);
+                    const parsed = JSON.parse(saved);
+                    if (Array.isArray(parsed)) {
+                        return parsed.map(hydrateClient);
+                    }
+                    return [];
                 } catch(e) { return []; }
             });
+
             const [currentClient, setCurrentClient] = useState(() => {
                 const draft = localStorage.getItem('immo_draft');
                 if (draft) {
                     try {
-                        return hydrateClient(JSON.parse(draft));
+                        const parsed = JSON.parse(draft);
+                        if (typeof parsed === 'object') return hydrateClient(parsed);
                     } catch(e) {}
                 }
                 return getEmptyClient();
@@ -196,9 +210,10 @@
                 if (view === 'form') localStorage.setItem('immo_draft', JSON.stringify(currentClient));
             }, [currentClient, view]);
 
+            // DÉPLOIEMENT DES ICÔNES AVEC SÉCURITÉ
             useEffect(() => {
                 setTimeout(() => lucide.createIcons(), 50);
-            }, [view, activeTab, currentClient?.medias, isMenuOpen, theme, toast.show, dvfResult]);
+            }, [view, activeTab, currentClient?.medias, isMenuOpen, theme, toast.show, dvfResult, dvfLoading]);
 
             const handleSave = () => {
                 if (!currentClient.nom && !currentClient.prenom) {
@@ -341,7 +356,12 @@
             const tabIndex = TABS.indexOf(activeTab);
             const glassCard = "bg-white/60 dark:bg-white/[0.03] border border-stone-200/70 dark:border-white/[0.07] backdrop-blur-2xl";
 
-            const rdvs = clients.filter(c => c.rdv).sort((a, b) => new Date(a.rdv) - new Date(b.rdv));
+            // TRI SÉCURISÉ DES DATES POUR L'AGENDA
+            const rdvs = clients.filter(c => c && c.rdv).sort((a, b) => {
+                const timeA = new Date(a.rdv).getTime();
+                const timeB = new Date(b.rdv).getTime();
+                return (isNaN(timeA) ? 0 : timeA) - (isNaN(timeB) ? 0 : timeB);
+            });
 
             return (
                 <div className="min-h-screen flex flex-col max-w-md mx-auto relative">
@@ -350,7 +370,7 @@
                         <div role="status" aria-live="polite" className="fixed top-4 inset-x-0 z-[60] max-w-md mx-auto px-4">
                             <div className={`toast-enter flex items-center gap-3 px-4 py-3.5 rounded-2xl border backdrop-blur-2xl shadow-2xl shadow-black/20 ${toast.type === 'error' ? 'bg-red-500/90 border-red-400/40 text-white' : 'bg-stone-900/90 dark:bg-white/10 border-white/10 text-white'}`}>
                                 <div className={`flex items-center justify-center w-8 h-8 rounded-full ${toast.type === 'error' ? 'bg-white/20' : 'bg-accent/20 text-accent'}`}>
-                                    <i data-lucide={toast.type === 'error' ? 'alert-circle' : 'check-circle'} className="w-4 h-4"></i>
+                                    <span key={toast.type}><i data-lucide={toast.type === 'error' ? 'alert-circle' : 'check-circle'} className="w-4 h-4"></i></span>
                                 </div>
                                 <span className="font-medium text-sm">{toast.message}</span>
                             </div>
@@ -383,7 +403,7 @@
                                             </button>
                                             <div className="h-px my-1 mx-2 bg-stone-200/80 dark:bg-white/[0.06]"></div>
                                             <button onClick={toggleTheme} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-stone-700 dark:text-stone-200 hover:bg-stone-900/5 dark:hover:bg-white/[0.06] transition-colors">
-                                                <i data-lucide={theme === 'dark' ? 'sun' : 'moon'} className="w-4 h-4 text-stone-400"></i> {theme === 'dark' ? 'Mode Clair' : 'Mode Sombre'}
+                                                <span key={theme}><i data-lucide={theme === 'dark' ? 'sun' : 'moon'} className="w-4 h-4 text-stone-400"></i></span> {theme === 'dark' ? 'Mode Clair' : 'Mode Sombre'}
                                             </button>
                                         </div>
                                     </>
@@ -467,7 +487,7 @@
                                                         <h3 className="font-semibold tracking-tight text-stone-900 dark:text-white truncate">{c?.nom} {c?.prenom}</h3>
                                                     </div>
                                                     <p className="text-[13px] font-medium text-accent mt-0.5 capitalize">
-                                                        {new Date(c.rdv).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                                        {formatRdvDate(c.rdv)}
                                                     </p>
                                                     <p className="text-[11px] text-stone-400 mt-1 truncate">{c?.adresse || 'Pas d\'adresse'}</p>
                                                 </div>
@@ -610,8 +630,81 @@
                                                 <div className="flex justify-between items-center mb-2">
                                                     <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-accent">Comparateur DVF (300m)</span>
                                                     <button onClick={runDvfSearch} disabled={dvfLoading} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-accent text-ink-900 active:scale-95 transition-transform flex items-center gap-2">
-                                                        {dvfLoading ? <i data-lucide="loader-2" className="w-3.5 h-3.5 animate-spin"></i> : <i data-lucide="search" className="w-3.5 h-3.5"></i>}
+                                                        <span key={dvfLoading ? 'loading' : 'search'}>
+                                                            <i data-lucide={dvfLoading ? "loader-2" : "search"} className={`w-3.5 h-3.5 ${dvfLoading ? 'animate-spin' : ''}`}></i>
+                                                        </span>
                                                         Calculer
                                                     </button>
                                                 </div>
-                                                <p className="text-
+                                                <p className="text-sm text-stone-600 dark:text-stone-300 italic">{dvfResult}</p>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-3 mb-4">
+                                                <Field label="Taxe foncière (€)" type="number" value={currentClient?.charges?.fonciere || ''} onChange={e => setCurrentClient({...currentClient, charges: {...currentClient.charges, fonciere: e.target.value}})} />
+                                                <Field label="Copro (€/mois)" type="number" value={currentClient?.charges?.copro || ''} onChange={e => setCurrentClient({...currentClient, charges: {...currentClient.charges, copro: e.target.value}})} />
+                                            </div>
+                                            
+                                            <label className="flex flex-col mb-4 w-full group">
+                                                <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-stone-500 dark:text-stone-500 mb-2 ml-0.5 transition-colors group-focus-within:text-accent">Délai de vente estimé</span>
+                                                <select value={currentClient?.projet?.delai || 'Moyen'} onChange={e => setCurrentClient({...currentClient, projet: {...currentClient.projet, delai: e.target.value}})} 
+                                                    className={`appearance-none w-full h-12 px-4 rounded-2xl text-[15px] font-medium border outline-none transition-all focus:ring-4 focus:ring-accent/15
+                                                    ${(currentClient?.projet?.delai || '') === 'Court' ? 'bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-400' : 
+                                                      (currentClient?.projet?.delai || '') === 'Moyen' ? 'bg-orange-500/10 border-orange-500/30 text-orange-700 dark:text-orange-400' : 
+                                                      'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-400'}`}>
+                                                    <option value="Court" className="text-stone-900 dark:text-stone-100">Court (Vente rapide)</option>
+                                                    <option value="Moyen" className="text-stone-900 dark:text-stone-100">Moyen (Délai standard)</option>
+                                                    <option value="Long" className="text-stone-900 dark:text-stone-100">Long (Bien atypique / patient)</option>
+                                                </select>
+                                            </label>
+
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <Field label="Prix attendu (€)" type="number" value={currentClient?.projet?.prixAttendu || ''} onChange={e => setCurrentClient({...currentClient, projet: {...currentClient.projet, prixAttendu: e.target.value}})} />
+                                                <Field label="Prix / m²" type="text" value={calculPrixM2} readOnly={true} />
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {activeTab === 'medias' && (
+                                        <div>
+                                            <SectionTitle icon="images" title="Médias" subtitle={`${(currentClient?.medias || []).length} photo${(currentClient?.medias || []).length > 1 ? 's' : ''} jointe${(currentClient?.medias || []).length > 1 ? 's' : ''}`} />
+                                            <input id="camera-input" type="file" accept="image/jpeg, image/png, image/jpg" capture="camera" onChange={handleMediaUpload} className="hidden" />
+                                            <input id="gallery-input" type="file" accept="image/*" multiple onChange={handleMediaUpload} className="hidden" />
+                                            <div className="grid grid-cols-2 gap-3 mb-4">
+                                                <button onClick={triggerCamera} type="button" className="flex flex-col items-center justify-center gap-2 h-28 rounded-2xl bg-stone-900 dark:bg-white text-white dark:text-ink-900 active:scale-[0.98] transition-transform">
+                                                    <span className="flex items-center justify-center w-10 h-10 rounded-full bg-accent text-ink-900">
+                                                        <i data-lucide="camera" className="w-5 h-5"></i>
+                                                    </span>
+                                                    <span className="text-xs font-medium">Photo</span>
+                                                </button>
+                                                <button onClick={triggerGallery} type="button" className="flex flex-col items-center justify-center gap-2 h-28 rounded-2xl border border-dashed border-stone-300 dark:border-white/15 bg-white/40 dark:bg-white/[0.02] text-stone-600 dark:text-stone-300 active:scale-[0.98] transition-transform">
+                                                    <span className="flex items-center justify-center w-10 h-10 rounded-full bg-stone-900/5 dark:bg-white/[0.06]">
+                                                        <i data-lucide="image" className="w-5 h-5"></i>
+                                                    </span>
+                                                    <span className="text-xs font-medium">Galerie</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                <div className="fixed bottom-0 inset-x-0 z-30 max-w-md mx-auto px-4 pb-4 pt-3">
+                                    <div className={`flex gap-2 p-2 rounded-3xl border border-stone-200/70 dark:border-white/[0.07] backdrop-blur-2xl bg-white/80 dark:bg-ink-800/70 shadow-2xl shadow-black/10 dark:shadow-black/50`}>
+                                        <button onClick={abandonDraft} className="flex-1 h-12 rounded-2xl text-sm font-medium text-stone-500 dark:text-stone-400 hover:bg-stone-900/5 dark:hover:bg-white/[0.06] transition-colors">
+                                            Annuler
+                                        </button>
+                                        <button onClick={handleSave} className="flex-[2] h-12 rounded-2xl bg-accent text-ink-900 text-sm font-semibold flex items-center justify-center gap-2 shadow-lg shadow-accent/25 active:scale-[0.98] transition-transform">
+                                            <i data-lucide="check" className="w-4 h-4"></i><span>Enregistrer</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </main>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
