@@ -6,6 +6,12 @@
     <title>Estimo V2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Liens PWA pour PWABuilder -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
     <style>
         .tab-content { display: none; }
         .tab-content.active { display: block; }
@@ -24,20 +30,20 @@
 
         <!-- ACCUEIL -->
         <section id="tab-home" class="tab-content active">
-            <div class="text-center py-6">
-                <h2 class="text-xl font-bold text-slate-900 mb-2">Bienvenue sur Estimo</h2>
-                <p class="text-xs text-slate-600 mb-6">Outil d'estimation et de comparaison immobilière de terrain.</p>
+            <div class="text-center py-4">
+                <h2 class="text-lg font-bold text-slate-900 mb-1">Bienvenue sur Estimo</h2>
+                <p class="text-xs text-slate-600 mb-4">Outil d'estimation et de comparaison immobilière de terrain.</p>
                 
-                <div class="grid grid-cols-1 gap-3">
-                    <button onclick="switchTab('client')" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg font-semibold shadow flex items-center justify-center space-x-2 text-sm">
+                <div class="grid grid-cols-1 gap-2.5">
+                    <button onclick="switchTab('client')" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-2.5 rounded-lg font-semibold shadow flex items-center justify-center space-x-2 text-xs">
                         <i class="fa-solid fa-plus-circle"></i>
                         <span>Nouvelle Estimation</span>
                     </button>
-                    <button onclick="switchTab('comparator')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-lg font-semibold shadow flex items-center justify-center space-x-2 text-sm">
+                    <button onclick="switchTab('comparator')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white p-2.5 rounded-lg font-semibold shadow flex items-center justify-center space-x-2 text-xs">
                         <i class="fa-solid fa-map-location-dot"></i>
                         <span>Module Comparatif (DVF)</span>
                     </button>
-                    <button onclick="switchTab('archives')" class="w-full bg-slate-700 hover:bg-slate-800 text-white p-3 rounded-lg font-semibold shadow flex items-center justify-center space-x-2 text-sm">
+                    <button onclick="switchTab('archives')" class="w-full bg-slate-700 hover:bg-slate-800 text-white p-2.5 rounded-lg font-semibold shadow flex items-center justify-center space-x-2 text-xs">
                         <i class="fa-solid fa-folder-open"></i>
                         <span>Archives & Contacts</span>
                     </button>
@@ -178,6 +184,11 @@
     </nav>
 
     <script>
+        // Enregistrement du Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error:', err));
+        }
+
         // Gestion des onglets
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -230,7 +241,6 @@
             resultsDiv.innerHTML = `<p class="text-center text-blue-600 animate-pulse">Recherche DVF dans un rayon de 300m...</p>`;
             
             setTimeout(() => {
-                // Simulation réaliste basée sur le type
                 const minPrice = type === 'Appartement' ? 3200 : 3800;
                 const maxPrice = type === 'Appartement' ? 4200 : 5100;
                 const textResult = `Fourchette constatée (${type}) : <strong>${minPrice} €/m² à ${maxPrice} €/m²</strong> (3 ventes récentes dans les 300m)`;
@@ -240,7 +250,7 @@
             }, 600);
         }
 
-        // Sauvegarde d'une fiche client (Stockage local simple)
+        // Sauvegarde d'une fiche client
         function saveClient() {
             const name = document.getElementById('client-name').value || "Client Anonyme";
             const address = document.getElementById('client-address').value || "Adresse non renseignée";
@@ -266,7 +276,6 @@
 
             let archives = JSON.parse(localStorage.getItem('estimo_archives') || '[]');
 
-            // Filtrage par recherche
             if(searchQuery) {
                 archives = archives.filter(item => 
                     item.name.toLowerCase().includes(searchQuery) || 
@@ -274,11 +283,9 @@
                 );
             }
 
-            // Tri
             if(sortMode === 'alpha') {
                 archives.sort((a, b) => a.name.localeCompare(b.name));
             } else {
-                // Plus récent en premier (ordre inverse de création)
                 archives.reverse();
             }
 
@@ -303,7 +310,6 @@
             listContainer.innerHTML = html;
         }
 
-        // Initialisation initiale
         document.addEventListener('DOMContentLoaded', () => {
             renderArchives();
             updateDelayColor(document.getElementById('sale-delay'));
