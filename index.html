@@ -94,6 +94,63 @@
             };
         }
 
+        const getDvfData = async (address, type) => {
+            try {
+                const geoRes = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(address)}&limit=1`);
+                const geoData = await geoRes.json();
+                if (!geoData.features || geoData.features.length === 0) return null;
+                
+                const [lon, lat] = geoData.features[0].geometry.coordinates;
+                const citycode = geoData.features[0].properties.citycode;
+
+                const dvfRes = await fetch(`https://app.dvf.etalab.gouv.fr/api/mutations3/commune/${citycode}`);
+                const dvfData = await dvfRes.json();
+                if (!dvfData || !dvfData.mutations) return null;
+
+                const R = 6371e3; 
+                let prix = [];
+                
+                dvfData.mutations.forEach(sale => {
+                    if (sale.nature_mutation !== "Vente" && sale.nature_mutation !== "Vente en l'état futur d'achèvement") return;
+                    if (!sale.valeur_fonciere || !sale.surface_reelle_bati) return;
+                    
+                    const isMaison = sale.libelle_type_local && sale.libelle_type_local.includes('Maison');
+                    const isAppart = sale.libelle_type_local && sale.libelle_type_local.includes('Appartement');
+                    if (type === 'Maison' && !isMaison) return;
+                    if (type === 'Appartement' && !isAppart) return;
+                    if (!sale.lon || !sale.lat) return;
+                    
+                    const dLat = (sale.lat - lat) * Math.PI / 180;
+                    const dLon = (sale.lon - lon) * Math.PI / 180;
+                    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                              Math.cos(lat * Math.PI / 180) * Math.cos(sale.lat * Math.PI / 180) *
+                              Math.sin(dLon/2) * Math.sin(dLon/2);
+                    const distance = R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+                    
+                    if (distance <= 300) {
+                        const pM2 = sale.valeur_fonciere / sale.surface_reelle_bati;
+                        if (pM2 > 1000 && pM2 < 25000) prix.push(pM2);
+                    }
+                });
+                
+                if (prix.length === 0) return { min: 0, max: 0, count: 0 };
+                
+                prix.sort((a, b) => a - b);
+                let min, max;
+                if (prix.length >= 5) {
+                    min = Math.round(prix[Math.floor(prix.length * 0.1)]);
+                    max = Math.round(prix[Math.floor(prix.length * 0.9)]);
+                } else {
+                    min = Math.round(prix[0]);
+                    max = Math.round(prix[prix.length - 1]);
+                }
+                return { min, max, count: prix.length };
+            } catch (e) {
+                console.error("Erreur API DVF:", e);
+                return null;
+            }
+        };
+
         function App() {
             const [view, setView] = useState(() => {
                 const hash = window.location.hash.replace('#', '');
@@ -114,14 +171,15 @@
             
             const [archiveSearch, setArchiveSearch] = useState('');
             const [archiveSort, setArchiveSort] = useState('recent');
+            
             const [dvfAddress, setDvfAddress] = useState('');
             const [dvfType, setDvfType] = useState('Appartement');
             const [dvfResult, setDvfResult] = useState(null);
+            const [clientDvfResult, setClientDvfResult] = useState(null);
 
             const [activeTab, setActiveTab] = useState('client');
             const [isMenuOpen, setIsMenuOpen] = useState(false);
             const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
-            
             const [theme, setTheme] = useState(() => localStorage.getItem('immo_theme') || 'light');
 
             useEffect(() => {
@@ -176,7 +234,7 @@
 
             useEffect(() => {
                 setTimeout(() => lucide.createIcons(), 50);
-            }, [view, activeTab, currentClient, isMenuOpen, theme, toast.show, dvfResult, archiveSearch]);
+            }, [view, activeTab, currentClient, isMenuOpen, theme, toast.show, dvfResult, clientDvfResult, archiveSearch]);
 
             const handleSave = () => {
                 if (!currentClient.nom && !currentClient.prenom) {
@@ -193,6 +251,7 @@
                     setClients(updatedClients);
                     localStorage.removeItem('immo_draft');
                     setCurrentClient(getEmptyClient());
+                    setClientDvfResult(null); 
                     navigate('list');
                     showNotification('Dossier sauvegardé.');
                 } catch (e) {
@@ -204,6 +263,7 @@
                 if(window.confirm("Annuler cette estimation en cours ?")) {
                     localStorage.removeItem('immo_draft');
                     setCurrentClient(getEmptyClient());
+                    setClientDvfResult(null);
                     navigate('home');
                 }
             };
@@ -315,7 +375,7 @@
                                 </div>
 
                                 <div className="flex flex-col w-full gap-3 mt-12">
-                                    <button onClick={() => { localStorage.removeItem('immo_draft'); setCurrentClient(getEmptyClient()); setActiveTab('client'); navigate('form'); }}
+                                    <button onClick={() => { localStorage.removeItem('immo_draft'); setCurrentClient(getEmptyClient()); setClientDvfResult(null); setActiveTab('client'); navigate('form'); }}
                                             className="group w-full flex items-center gap-4 p-4 rounded-3xl bg-stone-900 dark:bg-white text-white dark:text-ink-900 shadow-2xl shadow-stone-900/20 dark:shadow-white/5 active:scale-[0.98] transition-transform">
                                         <span className="flex items-center justify-center w-12 h-12 rounded-2xl bg-accent text-ink-900">
                                             <i data-lucide="plus" className="w-5 h-5"></i>
@@ -369,17 +429,23 @@
                                         </div>
                                     </label>
                                     <Field label="Adresse du bien" value={dvfAddress} onChange={e => setDvfAddress(e.target.value)} />
-                                    <button onClick={() => {
+                                    
+                                    <button onClick={async () => {
                                         if(!dvfAddress) return showNotification('Adresse requise', 'error');
                                         setDvfResult({ loading: true });
-                                        setTimeout(() => {
-                                            const minPrice = dvfType === 'Appartement' ? 3200 : 3800;
-                                            const maxPrice = dvfType === 'Appartement' ? 4200 : 5100;
-                                            setDvfResult({ min: minPrice, max: maxPrice, count: 3 });
-                                        }, 600);
+                                        
+                                        const res = await getDvfData(dvfAddress, dvfType);
+                                        
+                                        if(!res) {
+                                            showNotification('Adresse introuvable ou erreur API', 'error');
+                                            setDvfResult(null);
+                                        } else {
+                                            setDvfResult(res);
+                                        }
                                     }} className="w-full h-12 rounded-2xl bg-stone-900 dark:bg-white text-white dark:text-ink-900 text-[15px] font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform mt-2">
                                         <i data-lucide="search" className="w-4 h-4"></i> Analyser le secteur
                                     </button>
+                                    
                                     {dvfResult && (
                                         <div className="mt-6 pt-6 border-t border-stone-200/70 dark:border-white/[0.06]">
                                             {dvfResult.loading ? (
@@ -387,11 +453,16 @@
                                                     <i data-lucide="loader-2" className="w-6 h-6 animate-spin mb-2"></i>
                                                     <span className="text-sm">Recherche dans les 300m...</span>
                                                 </div>
+                                            ) : dvfResult.count === 0 ? (
+                                                <div className="text-center bg-stone-100 dark:bg-white/[0.04] rounded-2xl p-4 border border-stone-200/70 dark:border-white/[0.08]">
+                                                    <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-stone-500 mb-1">Aucun comparable</p>
+                                                    <p className="text-sm text-stone-500">Aucune vente trouvée dans un rayon de 300m.</p>
+                                                </div>
                                             ) : (
                                                 <div className="text-center bg-accent/10 rounded-2xl p-4 border border-accent/20">
                                                     <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-accent mb-1">Fourchette constatée</p>
                                                     <p className="text-2xl font-bold text-stone-900 dark:text-white">
-                                                        {dvfResult.min} € <span className="text-lg font-medium text-stone-500 mx-1">à</span> {dvfResult.max} € <span className="text-lg font-medium text-stone-500">/m²</span>
+                                                        {new Intl.NumberFormat('fr-FR').format(dvfResult.min)} € <span className="text-lg font-medium text-stone-500 mx-1">à</span> {new Intl.NumberFormat('fr-FR').format(dvfResult.max)} € <span className="text-lg font-medium text-stone-500">/m²</span>
                                                     </p>
                                                     <p className="text-xs text-stone-500 mt-2">{dvfResult.count} ventes récentes à proximité</p>
                                                 </div>
@@ -447,7 +518,7 @@
                                     )}
                                     <div className="space-y-3">
                                         {filteredClients.map(c => (
-                                            <div key={c.id} onClick={() => { setCurrentClient(c); setActiveTab('client'); navigate('form'); }} 
+                                            <div key={c.id} onClick={() => { setCurrentClient(c); setActiveTab('client'); setClientDvfResult(null); navigate('form'); }} 
                                                 className={`p-4 rounded-3xl ${glassCard} cursor-pointer transition-all hover:border-accent/40 active:scale-[0.99]`}>
                                                 <div className="flex items-start gap-3">
                                                     <div className="flex items-center justify-center shrink-0 w-11 h-11 rounded-2xl bg-gradient-to-br from-accent/30 to-accent/5 border border-accent/20 text-accent font-semibold text-sm uppercase">
@@ -508,7 +579,10 @@
                                             </div>
                                             <Field label="Téléphone" type="tel" value={currentClient.telephone} onChange={e => setCurrentClient({...currentClient, telephone: e.target.value})} />
                                             <Field label="Email" type="email" value={currentClient.email} onChange={e => setCurrentClient({...currentClient, email: e.target.value})} />
-                                            <Field label="Adresse du bien" value={currentClient.adresse} onChange={e => setCurrentClient({...currentClient, adresse: e.target.value})} />
+                                            <Field label="Adresse du bien" value={currentClient.adresse} onChange={e => {
+                                                setCurrentClient({...currentClient, adresse: e.target.value});
+                                                setClientDvfResult(null); 
+                                            }} />
                                         </>
                                     )}
 
@@ -565,35 +639,79 @@
                                     {activeTab === 'financier' && (
                                         <>
                                             <SectionTitle icon="wallet" title="Financier" subtitle="Charges et projet de vente" />
+                                            
                                             <div className={`p-4 mb-5 rounded-2xl border ${currentClient.adresse ? 'bg-accent/10 border-accent/20' : 'bg-stone-100 dark:bg-white/[0.02] border-stone-200/70 dark:border-white/[0.05]'}`}>
-                                                <span className={`text-[11px] font-medium uppercase tracking-[0.14em] flex items-center gap-2 mb-1 ${currentClient.adresse ? 'text-accent' : 'text-stone-500'}`}>
-                                                    <i data-lucide="map-pin" className="w-3.5 h-3.5"></i> Fourchette DVF (300m)
-                                                </span>
-                                                <p className={`text-sm font-semibold ${currentClient.adresse ? 'text-stone-900 dark:text-white' : 'text-stone-400'}`}>
-                                                    {currentClient.adresse ? `${currentClient.typeBien === 'Appartement' ? '3200' : '3800'} € à ${currentClient.typeBien === 'Appartement' ? '4200' : '5100'} € /m²` : `Saisissez l'adresse pour estimer`}
-                                                </p>
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className={`text-[11px] font-medium uppercase tracking-[0.14em] flex items-center gap-2 ${currentClient.adresse ? 'text-accent' : 'text-stone-500'}`}>
+                                                        <i data-lucide="map-pin" className="w-3.5 h-3.5"></i> Fourchette DVF (300m)
+                                                    </span>
+                                                    {currentClient.adresse && (
+                                                        <button onClick={async (e) => {
+                                                            e.preventDefault();
+                                                            setClientDvfResult({ loading: true });
+                                                            const res = await getDvfData(currentClient.adresse, currentClient.typeBien);
+                                                            if(res) setClientDvfResult(res);
+                                                            else { setClientDvfResult(null); showNotification('Erreur API', 'error'); }
+                                                        }} className="text-[10px] font-semibold bg-accent/20 text-accent px-2 py-1 rounded-lg flex items-center gap-1 active:scale-95 transition-transform">
+                                                            {clientDvfResult?.loading ? <i data-lucide="loader-2" className="w-3 h-3 animate-spin"></i> : <i data-lucide="refresh-cw" className="w-3 h-3"></i>}
+                                                            Calculer
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <div className={`text-sm font-semibold ${currentClient.adresse ? 'text-stone-900 dark:text-white' : 'text-stone-400'}`}>
+                                                    {!currentClient.adresse ? (
+                                                        <p className="font-normal">Saisissez l'adresse pour estimer</p>
+                                                    ) : clientDvfResult?.loading ? (
+                                                        <p className="text-stone-500 flex items-center gap-2 font-normal"><i data-lucide="loader-2" className="w-4 h-4 animate-spin"></i> Recherche en cours...</p>
+                                                    ) : clientDvfResult ? (
+                                                        clientDvfResult.count > 0 ? (
+                                                            <p className="text-lg">{new Intl.NumberFormat('fr-FR').format(clientDvfResult.min)} € à {new Intl.NumberFormat('fr-FR').format(clientDvfResult.max)} € /m² <span className="text-xs font-normal text-stone-500 ml-1">({clientDvfResult.count} ventes)</span></p>
+                                                        ) : (
+                                                            <p className="text-stone-500 font-normal">Aucune vente récente dans les 300m</p>
+                                                        )
+                                                    ) : (
+                                                        <p className="text-stone-500 italic font-normal">Cliquez sur Calculer</p>
+                                                    )}
+                                                </div>
                                             </div>
+
                                             <div className="grid grid-cols-2 gap-3">
                                                 <Field label="Taxe foncière (€)" type="number" value={currentClient.charges.fonciere} onChange={e => setCurrentClient({...currentClient, charges: {...currentClient.charges, fonciere: e.target.value}})} />
                                                 <Field label="Copro (€/mois)" type="number" value={currentClient.charges.copro} onChange={e => setCurrentClient({...currentClient, charges: {...currentClient.charges, copro: e.target.value}})} />
                                             </div>
                                             <div className="h-px my-2 mb-5 bg-stone-200/70 dark:bg-white/[0.06]"></div>
+                                            
+                                            {/* Séparation du délai en pleine largeur pour préserver la grille 2 colonnes en dessous */}
+                                            <label className="flex flex-col mb-4 group">
+                                                <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-stone-500 mb-2 ml-0.5 group-focus-within:text-accent transition-colors">Délai estimé</span>
+                                                <div className="relative">
+                                                    <select value={currentClient.projet.delai} onChange={e => setCurrentClient({...currentClient, projet: {...currentClient.projet, delai: e.target.value}})} 
+                                                        className={`appearance-none w-full h-12 pl-4 pr-8 rounded-2xl text-[14px] border outline-none transition-all focus:ring-4 focus:ring-accent/15 font-semibold dark:[&>option]:bg-ink-800 ${
+                                                            currentClient.projet.delai === 'Court' ? 'text-green-600 bg-green-50/80 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20' :
+                                                            currentClient.projet.delai === 'Moyen' ? 'text-amber-600 bg-amber-50/80 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20' :
+                                                            'text-red-600 bg-red-50/80 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20'
+                                                        }`}>
+                                                        <option value="Court">Court</option><option value="Moyen">Moyen</option><option value="Long">Long</option>
+                                                    </select>
+                                                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400/70"><i data-lucide="chevrons-up-down" className="w-3.5 h-3.5"></i></span>
+                                                </div>
+                                            </label>
+
                                             <div className="grid grid-cols-2 gap-3">
-                                                <label className="flex flex-col mb-4 group">
-                                                    <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-stone-500 mb-2 ml-0.5 group-focus-within:text-accent transition-colors">Délai</span>
-                                                    <div className="relative">
-                                                        <select value={currentClient.projet.delai} onChange={e => setCurrentClient({...currentClient, projet: {...currentClient.projet, delai: e.target.value}})} 
-                                                            className={`appearance-none w-full h-12 pl-4 pr-8 rounded-2xl text-[14px] border outline-none transition-all focus:ring-4 focus:ring-accent/15 font-semibold dark:[&>option]:bg-ink-800 ${
-                                                                currentClient.projet.delai === 'Court' ? 'text-green-600 bg-green-50/80 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20' :
-                                                                currentClient.projet.delai === 'Moyen' ? 'text-amber-600 bg-amber-50/80 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20' :
-                                                                'text-red-600 bg-red-50/80 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20'
-                                                            }`}>
-                                                            <option value="Court">Court</option><option value="Moyen">Moyen</option><option value="Long">Long</option>
-                                                        </select>
-                                                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400/70"><i data-lucide="chevrons-up-down" className="w-3.5 h-3.5"></i></span>
+                                                <Field label="Prix attendu (€)" type="number" value={currentClient.projet.prixAttendu} onChange={e => setCurrentClient({...currentClient, projet: {...currentClient.projet, prixAttendu: e.target.value}})} />
+                                                
+                                                {/* NOUVEAU : Champ Calcul Prix / m² */}
+                                                <label className="flex flex-col mb-4 w-full group">
+                                                    <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-stone-500 dark:text-stone-500 mb-2 ml-0.5 transition-colors group-focus-within:text-accent">Prix / m²</span>
+                                                    <div className="flex items-center w-full h-12 px-4 rounded-2xl text-[15px] bg-stone-200/50 dark:bg-white/[0.02] border border-stone-200/80 dark:border-white/[0.08] text-stone-600 dark:text-stone-400 font-semibold transition-all">
+                                                        {(() => {
+                                                            const surface = parseFloat(currentClient.surfaceCarrez) || parseFloat(currentClient.surfaceHabitable);
+                                                            const prix = parseFloat(currentClient.projet.prixAttendu);
+                                                            if (surface && prix) return new Intl.NumberFormat('fr-FR').format(Math.round(prix / surface)) + " €";
+                                                            return "—";
+                                                        })()}
                                                     </div>
                                                 </label>
-                                                <Field label="Prix attendu (€)" type="number" value={currentClient.projet.prixAttendu} onChange={e => setCurrentClient({...currentClient, projet: {...currentClient.projet, prixAttendu: e.target.value}})} />
                                             </div>
                                         </>
                                     )}
