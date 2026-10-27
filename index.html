@@ -599,4 +599,154 @@
                                                 <div className="relative">
                                                     <select value={currentClient.chauffage.type} onChange={e => setCurrentClient({...currentClient, chauffage: {...currentClient.chauffage, type: e.target.value}})} className="appearance-none w-full h-12 pl-4 pr-10 rounded-2xl text-[15px] bg-white/70 dark:bg-white/[0.04] border border-stone-200/80 dark:border-white/[0.08] text-stone-900 dark:text-stone-100 outline-none transition-all focus:border-accent/70 focus:ring-4 focus:ring-accent/15 dark:[&>option]:bg-ink-800">
                                                         <option value="Individuel">Individuel</option>
-                                                        <option
+                                                        <option value="Collectif">Collectif</option>
+                                                    </select>
+                                                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400">
+                                                        <i data-lucide="chevrons-up-down" className="w-4 h-4"></i>
+                                                    </span>
+                                                </div>
+                                            </label>
+
+                                            <div className="mb-4">
+                                                <span className="block text-[11px] font-medium uppercase tracking-[0.14em] text-stone-500 mb-2 ml-0.5">Équipements</span>
+                                                <div className="rounded-2xl border border-stone-200/80 dark:border-white/[0.08] bg-white/50 dark:bg-white/[0.02] divide-y divide-stone-200/70 dark:divide-white/[0.06]">
+                                                    <label className="flex items-center justify-between px-4 h-14 cursor-pointer">
+                                                        <span className="flex items-center gap-3 text-[15px]"><i data-lucide="chef-hat" className="w-4 h-4 text-stone-400"></i>Cuisine équipée</span>
+                                                        <input type="checkbox" className="peer sr-only" checked={currentClient.equipements.cuisineEquipee} onChange={e => setCurrentClient({...currentClient, equipements: {...currentClient.equipements, cuisineEquipee: e.target.checked}})} />
+                                                        <span aria-hidden="true" className="relative w-11 h-6 rounded-full bg-stone-300 dark:bg-white/10 transition-colors peer-checked:bg-accent peer-focus-visible:ring-4 peer-focus-visible:ring-accent/25 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-5"></span>
+                                                    </label>
+                                                    <label className="flex items-center justify-between px-4 h-14 cursor-pointer">
+                                                        <span className="flex items-center gap-3 text-[15px]"><i data-lucide="car" className="w-4 h-4 text-stone-400"></i>Stationnement</span>
+                                                        <input type="checkbox" className="peer sr-only" checked={currentClient.equipements.stationnement} onChange={e => setCurrentClient({...currentClient, equipements: {...currentClient.equipements, stationnement: e.target.checked}})} />
+                                                        <span aria-hidden="true" className="relative w-11 h-6 rounded-full bg-stone-300 dark:bg-white/10 transition-colors peer-checked:bg-accent peer-focus-visible:ring-4 peer-focus-visible:ring-accent/25 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-5"></span>
+                                                    </label>
+                                                    {/* NOUVEAU: Toggle Climatisation ajouté ici avec le même style */}
+                                                    <label className="flex items-center justify-between px-4 h-14 cursor-pointer">
+                                                        <span className="flex items-center gap-3 text-[15px]"><i data-lucide="snowflake" className="w-4 h-4 text-stone-400"></i>Climatisation</span>
+                                                        <input type="checkbox" className="peer sr-only" checked={currentClient.equipements.climatisation} onChange={e => setCurrentClient({...currentClient, equipements: {...currentClient.equipements, climatisation: e.target.checked}})} />
+                                                        <span aria-hidden="true" className="relative w-11 h-6 rounded-full bg-stone-300 dark:bg-white/10 transition-colors peer-checked:bg-accent peer-focus-visible:ring-4 peer-focus-visible:ring-accent/25 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-5"></span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <label className="flex flex-col group">
+                                                <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-stone-500 mb-2 ml-0.5 group-focus-within:text-accent transition-colors">État (fissures, etc.)</span>
+                                                <textarea className="w-full p-4 rounded-2xl text-[15px] leading-relaxed bg-white/70 dark:bg-white/[0.04] border border-stone-200/80 dark:border-white/[0.08] text-stone-900 dark:text-stone-100 outline-none resize-none transition-all focus:border-accent/70 focus:ring-4 focus:ring-accent/15" rows="3" value={currentClient.etat.notesEtat} onChange={e => setCurrentClient({...currentClient, etat: {...currentClient.etat, notesEtat: e.target.value}})}></textarea>
+                                            </label>
+                                        </>
+                                    )}
+
+                                    {activeTab === 'financier' && (
+                                        <>
+                                            <SectionTitle icon="wallet" title="Financier" subtitle="Charges et projet de vente" />
+                                            
+                                            {/* NOUVEAU: Encart DVF automatique basé sur l'adresse de la fiche */}
+                                            <div className={`p-4 mb-5 rounded-2xl border ${currentClient.adresse ? 'bg-accent/10 border-accent/20' : 'bg-stone-100 dark:bg-white/[0.02] border-stone-200/70 dark:border-white/[0.05]'}`}>
+                                                <span className={`text-[11px] font-medium uppercase tracking-[0.14em] flex items-center gap-2 mb-1 ${currentClient.adresse ? 'text-accent' : 'text-stone-500'}`}>
+                                                    <i data-lucide="map-pin" className="w-3.5 h-3.5"></i>
+                                                    Fourchette DVF (300m)
+                                                </span>
+                                                <p className={`text-sm font-semibold ${currentClient.adresse ? 'text-stone-900 dark:text-white' : 'text-stone-400'}`}>
+                                                    {currentClient.adresse 
+                                                        ? `${currentClient.typeBien === 'Appartement' ? '3200' : '3800'} € à ${currentClient.typeBien === 'Appartement' ? '4200' : '5100'} € /m²` 
+                                                        : `Saisissez l'adresse pour estimer`}
+                                                </p>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <Field label="Taxe foncière (€)" type="number" value={currentClient.charges.fonciere} onChange={e => setCurrentClient({...currentClient, charges: {...currentClient.charges, fonciere: e.target.value}})} />
+                                                <Field label="Copro (€/mois)" type="number" value={currentClient.charges.copro} onChange={e => setCurrentClient({...currentClient, charges: {...currentClient.charges, copro: e.target.value}})} />
+                                            </div>
+                                            <div className="h-px my-2 mb-5 bg-stone-200/70 dark:bg-white/[0.06]"></div>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                {/* NOUVEAU: Menu déroulant Délai avec codes couleurs */}
+                                                <label className="flex flex-col mb-4 group">
+                                                    <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-stone-500 mb-2 ml-0.5 group-focus-within:text-accent transition-colors">Délai</span>
+                                                    <div className="relative">
+                                                        <select value={currentClient.projet.delai} onChange={e => setCurrentClient({...currentClient, projet: {...currentClient.projet, delai: e.target.value}})} 
+                                                            className={`appearance-none w-full h-12 pl-4 pr-8 rounded-2xl text-[14px] border outline-none transition-all focus:ring-4 focus:ring-accent/15 font-semibold dark:[&>option]:bg-ink-800 ${
+                                                                currentClient.projet.delai === 'Court' ? 'text-green-600 bg-green-50/80 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20' :
+                                                                currentClient.projet.delai === 'Moyen' ? 'text-amber-600 bg-amber-50/80 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20' :
+                                                                'text-red-600 bg-red-50/80 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20'
+                                                            }`}>
+                                                            <option value="Court">Court</option>
+                                                            <option value="Moyen">Moyen</option>
+                                                            <option value="Long">Long</option>
+                                                        </select>
+                                                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-stone-400/70">
+                                                            <i data-lucide="chevrons-up-down" className="w-3.5 h-3.5"></i>
+                                                        </span>
+                                                    </div>
+                                                </label>
+                                                <Field label="Prix attendu (€)" type="number" value={currentClient.projet.prixAttendu} onChange={e => setCurrentClient({...currentClient, projet: {...currentClient.projet, prixAttendu: e.target.value}})} />
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {activeTab === 'medias' && (
+                                        <div>
+                                            <SectionTitle icon="images" title="Médias" subtitle={`${currentClient.medias.length} photo${currentClient.medias.length > 1 ? 's' : ''} jointe${currentClient.medias.length > 1 ? 's' : ''}`} />
+                                            <input id="camera-input" type="file" accept="image/jpeg, image/png, image/jpg" capture="camera" onChange={handleMediaUpload} className="hidden" />
+                                            {/* CORRECTION: L'input ci-dessous force l'ouverture de la galerie */}
+                                            <input id="gallery-input" type="file" accept="image/*" multiple onChange={handleMediaUpload} className="hidden" />
+                                            <div className="grid grid-cols-2 gap-3 mb-4">
+                                                <button onClick={triggerCamera} type="button" className="flex flex-col items-center justify-center gap-2 h-28 rounded-2xl bg-stone-900 dark:bg-white text-white dark:text-ink-900 active:scale-[0.98] transition-transform">
+                                                    <span className="flex items-center justify-center w-10 h-10 rounded-full bg-accent text-ink-900">
+                                                        <i data-lucide="camera" className="w-5 h-5"></i>
+                                                    </span>
+                                                    <span className="text-xs font-medium">Photo</span>
+                                                </button>
+                                                <button onClick={triggerGallery} type="button" className="flex flex-col items-center justify-center gap-2 h-28 rounded-2xl border border-dashed border-stone-300 dark:border-white/15 bg-white/40 dark:bg-white/[0.02] text-stone-600 dark:text-stone-300 active:scale-[0.98] transition-transform">
+                                                    <span className="flex items-center justify-center w-10 h-10 rounded-full bg-stone-900/5 dark:bg-white/[0.06]">
+                                                        <i data-lucide="image" className="w-5 h-5"></i>
+                                                    </span>
+                                                    <span className="text-xs font-medium">Galerie</span>
+                                                </button>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-2">
+                                                {currentClient.medias.map((m, i) => (
+                                                    <div key={i} className="aspect-square rounded-2xl overflow-hidden relative bg-stone-200 dark:bg-white/[0.04] ring-1 ring-stone-900/5 dark:ring-white/[0.06]">
+                                                        <img src={m.url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                                                        <button aria-label={`Supprimer la photo ${i + 1}`} onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const n = [...currentClient.medias]; n.splice(i, 1);
+                                                            setCurrentClient({...currentClient, medias: n});
+                                                        }} className="absolute top-1.5 right-1.5 flex items-center justify-center w-7 h-7 rounded-full bg-black/50 backdrop-blur-md text-white border border-white/20 hover:bg-red-500 transition-colors">
+                                                            <i data-lucide="x" className="w-3.5 h-3.5"></i>
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                <div className="fixed bottom-0 inset-x-0 z-30 max-w-md mx-auto px-4 pb-4 pt-3">
+                                    <div className={`flex gap-2 p-2 rounded-3xl border border-stone-200/70 dark:border-white/[0.07] backdrop-blur-2xl bg-white/80 dark:bg-ink-800/70 shadow-2xl shadow-black/10 dark:shadow-black/50`}>
+                                        <button onClick={abandonDraft} className="flex-1 h-12 rounded-2xl text-sm font-medium text-stone-500 dark:text-stone-400 hover:bg-stone-900/5 dark:hover:bg-white/[0.06] transition-colors">
+                                            Annuler
+                                        </button>
+                                        <button onClick={handleSave} className="flex-[2] h-12 rounded-2xl bg-accent text-ink-900 text-sm font-semibold flex items-center justify-center gap-2 shadow-lg shadow-accent/25 active:scale-[0.98] transition-transform">
+                                            <i data-lucide="check" className="w-4 h-4"></i><span>Enregistrer</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </main>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+    
+    <!-- Ajout du service worker natif pour valider dans PWABuilder -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
+            });
+        }
+    </script>
+</body>
+</html>
