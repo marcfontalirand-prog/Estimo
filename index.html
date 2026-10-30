@@ -4,69 +4,97 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Estimo – Estimation immobilière</title>
-<meta name="description" content="Estimo : estimation de biens immobiliers sur la Côte d'Azur, hors ligne.">
-<meta name="theme-color" content="#0f1720">
+<meta name="description" content="Estimo : estimation immobilière fondée sur les ventes DVF à proximité du bien.">
+<meta name="theme-color" content="#f6f5f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="./manifest.json">
 <link rel="icon" href="./icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
 <link rel="stylesheet" href="./css/app.css">
+<script>try{const t=localStorage.getItem('estimo.theme');if(t)document.documentElement.dataset.theme=t}catch{}</script>
 <script type="module" src="./js/app.js"></script>
 </head>
 <body>
+<a class="skip" href="#main">Aller au contenu</a>
 <header class="top no-print">
-  <h1>Estimo</h1>
-  <nav>
-    <button data-view="form" class="active">Estimer</button>
+  <div class="brand"><span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></span><span>Estimo</span></div>
+  <nav class="seg" aria-label="Navigation">
+    <button data-view="form" class="active" aria-current="page">Estimer</button>
     <button data-view="history">Historique</button>
-    <button data-view="settings">Prix/m²</button>
   </nav>
+  <button id="theme" class="icon-btn" aria-label="Basculer thème clair/sombre" title="Thème"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
 </header>
-<main>
+<main id="main">
 <section id="view-form">
+  <div class="hero no-print">
+    <h1>Estimez un bien en quelques minutes</h1>
+    <p>Prix au m² issu des ventes réelles (DVF) autour de l'adresse, ajusté selon les caractéristiques du bien.</p>
+  </div>
 <form id="f" novalidate>
-  <fieldset><legend>Bien</legend>
-    <label>Adresse / référence<input name="adresse" autocomplete="off"></label>
-    <label>Type de bien<select name="type"><option value="appartement">Appartement</option><option value="maison">Maison</option></select></label>
-    <label>Commune / secteur<select name="secteur" id="secteur"></select></label>
-    <label>Prix/m² de référence (€)<input name="prixM2" type="number" inputmode="numeric" min="500" step="10"></label>
-    <label class="chk"><input type="checkbox" name="prixVerifie"> Prix/m² vérifié (DVF / ventes récentes)</label>
-    <p class="note" id="srcnote"></p>
-  </fieldset>
-  <fieldset><legend>Surfaces & pièces</legend>
-    <label>Surface habitable (m²)*<input name="surface" type="number" inputmode="decimal" min="9" step="0.01" required></label>
-    <label>Pièces*<input name="pieces" type="number" inputmode="numeric" min="1" required></label>
-    <label>Chambres<input name="chambres" type="number" inputmode="numeric" min="0"></label>
-    <label class="maison">Terrain (m²)<input name="terrain" type="number" inputmode="numeric" min="0"></label>
-    <label>Balcon (m²)<input name="balcon" type="number" inputmode="decimal" min="0"></label>
-    <label>Terrasse (m²)<input name="terrasse" type="number" inputmode="decimal" min="0"></label>
-    <label class="appart">Jardin privatif (m²)<input name="jardin" type="number" inputmode="decimal" min="0"></label>
-  </fieldset>
-  <fieldset><legend>Caractéristiques</legend>
-    <label class="appart">Étage (0 = RDC)<input name="etage" type="number" inputmode="numeric" min="-1"></label>
-    <label class="chk appart"><input type="checkbox" name="ascenseur"> Ascenseur</label>
-    <label class="chk appart"><input type="checkbox" name="dernierEtage"> Dernier étage</label>
-    <label>État<select name="etat"><option value="">— non renseigné —</option><option value="neuf">Neuf / VEFA</option><option value="refait">Refait à neuf</option><option value="bon">Bon état</option><option value="rafraichir">À rafraîchir</option><option value="travaux">Travaux importants</option><option value="renover">À rénover entièrement</option></select></label>
-    <label>DPE<select name="dpe"><option value="">— non renseigné —</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option value="NC">Non communiqué</option></select></label>
-    <label>Exposition<select name="exposition"><option value="">— non renseignée —</option><option value="sud">Sud</option><option value="sud-ouest">Sud-ouest</option><option value="sud-est">Sud-est</option><option value="ouest">Ouest</option><option value="est">Est</option><option value="nord">Nord</option><option value="traversant">Traversant</option></select></label>
-    <label>Vue<select name="vue"><option value="">— non renseignée —</option><option value="mer">Mer panoramique</option><option value="mer-partielle">Mer partielle</option><option value="degagee">Dégagée</option><option value="jardin">Sur jardin</option><option value="standard">Standard</option><option value="vis-a-vis">Vis-à-vis</option></select></label>
-    <label>Stationnement<select name="parking"><option value="aucun">Aucun</option><option value="exterieur">Place extérieure</option><option value="box">Box fermé</option><option value="garage">Garage</option></select></label>
-    <label class="chk"><input type="checkbox" name="piscine"> Piscine</label>
-    <label>Année de construction<input name="annee" type="number" inputmode="numeric" min="1600"></label>
-    <label class="appart">Charges copro (€/an)<input name="charges" type="number" inputmode="numeric" min="0"></label>
-    <label>Coefficient manuel agent (0,70–1,30)<input name="coefManuel" type="number" step="0.01" min="0.7" max="1.3" placeholder="1"></label>
-  </fieldset>
-  <div class="actions no-print">
-    <button type="submit" class="primary">Calculer</button>
-    <button type="button" id="reset">Nouveau</button>
+  <section class="card step" aria-labelledby="s1">
+    <header class="step-h"><span class="num">1</span><div><h2 id="s1">Le bien</h2><p>Adresse, type et surface</p></div></header>
+    <div class="field full addr">
+      <label for="adresse">Adresse du bien</label>
+      <div class="input-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
+      <input id="adresse" name="adresse" autocomplete="off" placeholder="ex. 12 boulevard Carnot, Le Cannet" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="sugg"></div>
+      <ul id="sugg" class="sugg" role="listbox" hidden></ul>
+      <input type="hidden" name="lat"><input type="hidden" name="lon"><input type="hidden" name="citycode">
+    </div>
+    <div class="field full"><span class="lbl" id="type-l">Type de bien</span>
+      <div class="toggle" role="radiogroup" aria-labelledby="type-l">
+        <label><input type="radio" name="type" value="appartement" checked><span>Appartement</span></label>
+        <label><input type="radio" name="type" value="maison"><span>Maison</span></label>
+      </div></div>
+    <div class="field"><label for="surface">Surface habitable</label><div class="unit"><input id="surface" name="surface" type="number" inputmode="decimal" min="9" step="0.01" required placeholder="65"><span>m²</span></div></div>
+    <div class="field"><label for="pieces">Pièces</label><input id="pieces" name="pieces" type="number" inputmode="numeric" min="1" required placeholder="3"></div>
+  </section>
+
+  <section class="card step" aria-labelledby="s2">
+    <header class="step-h"><span class="num">2</span><div><h2 id="s2">Prix de référence DVF</h2><p>Ventes comparables autour du bien</p></div></header>
+    <div class="field full"><label for="rayon">Rayon de recherche <output id="rayon-o">500 m</output></label>
+      <input id="rayon" name="rayon" type="range" min="200" max="2000" step="50" value="500">
+      <label class="chk"><input type="checkbox" name="autoWiden" checked> Élargir auto. si moins de 8 ventes</label>
+      <label class="chk"><input type="checkbox" name="annees3" checked> 3 dernières années (sinon 2)</label>
+    </div>
+    <div id="dvf" class="dvf full" aria-live="polite"><p class="muted">Saisissez une adresse, le type et la surface pour interroger les ventes DVF.</p></div>
+    <div class="field"><label for="prixM2">Prix/m² de référence</label><div class="unit"><input id="prixM2" name="prixM2" type="number" inputmode="numeric" min="500" step="10"><span>€/m²</span></div></div>
+    <div class="field"><span class="lbl">Origine</span><p id="prixSrc" class="pill-src">—</p><input type="hidden" name="prixSource"><input type="checkbox" name="prixVerifie" hidden></div>
+  </section>
+
+  <section class="card step" aria-labelledby="s3">
+    <header class="step-h"><span class="num">3</span><div><h2 id="s3">Surfaces & annexes</h2><p>Optionnel, affine l'estimation</p></div></header>
+    <div class="field"><label for="chambres">Chambres</label><input id="chambres" name="chambres" type="number" inputmode="numeric" min="0"></div>
+    <div class="field maison"><label for="terrain">Terrain</label><div class="unit"><input id="terrain" name="terrain" type="number" inputmode="numeric" min="0"><span>m²</span></div></div>
+    <div class="field"><label for="balcon">Balcon</label><div class="unit"><input id="balcon" name="balcon" type="number" inputmode="decimal" min="0"><span>m²</span></div></div>
+    <div class="field"><label for="terrasse">Terrasse</label><div class="unit"><input id="terrasse" name="terrasse" type="number" inputmode="decimal" min="0"><span>m²</span></div></div>
+    <div class="field appart"><label for="jardin">Jardin privatif</label><div class="unit"><input id="jardin" name="jardin" type="number" inputmode="decimal" min="0"><span>m²</span></div></div>
+    <div class="field"><label for="parking">Stationnement</label><select id="parking" name="parking"><option value="aucun">Aucun</option><option value="exterieur">Place extérieure</option><option value="box">Box fermé</option><option value="garage">Garage</option></select></div>
+  </section>
+
+  <section class="card step" aria-labelledby="s4">
+    <header class="step-h"><span class="num">4</span><div><h2 id="s4">Qualité & situation</h2><p>Chaque info renseignée resserre la fourchette</p></div></header>
+    <div class="field appart"><label for="etage">Étage (0 = RDC)</label><input id="etage" name="etage" type="number" inputmode="numeric" min="-1"></div>
+    <div class="field appart chks"><label class="chk"><input type="checkbox" name="ascenseur"> Ascenseur</label><label class="chk"><input type="checkbox" name="dernierEtage"> Dernier étage</label></div>
+    <div class="field"><label for="etat">État</label><select id="etat" name="etat"><option value="">Non renseigné</option><option value="neuf">Neuf / VEFA</option><option value="refait">Refait à neuf</option><option value="bon">Bon état</option><option value="rafraichir">À rafraîchir</option><option value="travaux">Travaux importants</option><option value="renover">À rénover entièrement</option></select></div>
+    <div class="field full"><span class="lbl" id="dpe-l">DPE</span><div class="dpe" role="radiogroup" aria-labelledby="dpe-l">
+      <label><input type="radio" name="dpe" value=""><span>?</span></label><label class="a"><input type="radio" name="dpe" value="A"><span>A</span></label><label class="b"><input type="radio" name="dpe" value="B"><span>B</span></label><label class="c"><input type="radio" name="dpe" value="C"><span>C</span></label><label class="d"><input type="radio" name="dpe" value="D"><span>D</span></label><label class="e"><input type="radio" name="dpe" value="E"><span>E</span></label><label class="f2"><input type="radio" name="dpe" value="F"><span>F</span></label><label class="g"><input type="radio" name="dpe" value="G"><span>G</span></label><label><input type="radio" name="dpe" value="NC"><span>NC</span></label></div></div>
+    <div class="field"><label for="exposition">Exposition</label><select id="exposition" name="exposition"><option value="">Non renseignée</option><option value="sud">Sud</option><option value="sud-ouest">Sud-ouest</option><option value="sud-est">Sud-est</option><option value="ouest">Ouest</option><option value="est">Est</option><option value="nord">Nord</option><option value="traversant">Traversant</option></select></div>
+    <div class="field"><label for="vue">Vue</label><select id="vue" name="vue"><option value="">Non renseignée</option><option value="mer">Mer panoramique</option><option value="mer-partielle">Mer partielle</option><option value="degagee">Dégagée</option><option value="jardin">Sur jardin</option><option value="standard">Standard</option><option value="vis-a-vis">Vis-à-vis</option></select></div>
+    <div class="field"><label for="annee">Année de construction</label><input id="annee" name="annee" type="number" inputmode="numeric" min="1600"></div>
+    <div class="field appart"><label for="charges">Charges copro</label><div class="unit"><input id="charges" name="charges" type="number" inputmode="numeric" min="0"><span>€/an</span></div></div>
+    <div class="field chks"><label class="chk"><input type="checkbox" name="piscine"> Piscine</label></div>
+    <div class="field"><label for="coefManuel">Coefficient agent</label><input id="coefManuel" name="coefManuel" type="number" step="0.01" min="0.7" max="1.3" placeholder="1,00"></div>
+  </section>
+  <div id="errors" role="alert" class="errors"></div>
+  <div class="bar no-print">
+    <button type="button" id="reset" class="btn ghost">Nouveau</button>
+    <button type="submit" class="btn primary">Calculer l'estimation</button>
   </div>
 </form>
-<div id="errors" role="alert"></div>
-<section id="result" hidden></section>
+<section id="result" hidden tabindex="-1"></section>
 </section>
-<section id="view-history" hidden><h2>Historique</h2><div id="hist"></div></section>
-<section id="view-settings" hidden><h2>Prix/m² par secteur</h2><p class="note" id="srcnote2"></p><div id="sect"></div>
-<div class="actions"><button id="saveSect" class="primary">Enregistrer</button><button id="resetSect">Valeurs par défaut</button></div></section>
+<section id="view-history" hidden><div class="hero"><h1>Historique</h1><p>Vos 200 dernières estimations, stockées sur cet appareil.</p></div><div id="hist"></div></section>
 </main>
-<footer class="no-print"><small>Estimo v2 – estimation indicative, ne remplace pas un avis de valeur argumenté.</small></footer>
+<footer class="no-print"><small>Estimo v3 · Données DVF (DGFiP, via Cerema) · Estimation indicative, ne remplace pas un avis de valeur argumenté.</small></footer>
 </body>
 </html>

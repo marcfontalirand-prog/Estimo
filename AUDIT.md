@@ -29,3 +29,9 @@ Constat sans complaisance de la version précédente (`index.html`, `manifest.js
 
 ## Réponse apportée par la v2
 Moteur séparé et testé (`js/engine.js`), tables de prix éditables et marquées « non vérifiées » (`js/data.js`), validation, fourchette dépendant des données manquantes, historique, impression PDF, PWA complète 100 % hors ligne sans dépendance externe.
+
+## v3 (30/10/2026)
+- Le tableau de prix/m² par commune codé en dur est remplacé par la médiane des ventes DVF à proximité (API Cerema, CORS vérifié), avec élargissement automatique, exclusion IQR, liste et carte des comparables, saisie manuelle et cache hors ligne.
+- Interface refondue (mobile d'abord, thème clair/sombre, sections numérotées, carte de résultat avec fourchette visuelle).
+- `sw.js` v3 : ressources statiques en réseau d'abord, API jamais interceptées ni mises en cache.
+- Risque restant : dépendance à `apidf-preprod.cerema.fr` (pas de SLA) ; en cas de panne, saisie manuelle ou cache.
