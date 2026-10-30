@@ -115,7 +115,7 @@ async function runDvf() {
   if (!i.lat || !(i.surface >= 9)) {
     box.className = 'dvf full'; box.innerHTML = `<p class="muted">${!i.lat ? 'Choisissez une adresse dans la liste proposée' : 'Indiquez la surface habitable'} pour interroger les ventes DVF.</p>`; return;
   }
-  const p = { lat: Number(i.lat), lon: Number(i.lon), type: type(), surface: i.surface, radius: i.rayon, years: i.annees3 ? 3 : 2, autoWiden: i.autoWiden };
+  const p = { lat: Number(i.lat), lon: Number(i.lon), type: type(), surface: i.surface, radius: i.rayon, years: i.annees3 ? 3 : 2, autoWiden: i.autoWiden, citycode: i.citycode || f.citycode.value };
   const seq = ++dvfSeq, k = cacheKey(p);
   box.className = 'dvf full'; box.innerHTML = `<p class="muted"><span class="spinner" aria-hidden="true"></span>Recherche des ventes DVF autour du bien…</p>`;
   try {
@@ -138,7 +138,7 @@ function renderDvf() {
   box.innerHTML = `<div class="dvf-head"><div class="dvf-med">${nf(d.median)} €<small>/m² médian</small></div>
     ${f.prixSource.value === 'manuel' ? `<button type="button" class="btn sm" id="useDvf">Utiliser la médiane</button>` : ''}</div>
     <div class="chips"><span class="chip"><b>${d.n}</b> ventes comparables</span><span class="chip">Q1–Q3 <b>${nf(d.q1)}–${nf(d.q3)} €</b></span>
-    <span class="chip">Rayon <b>${nf(d.radius)} m</b>${d.widened ? ' (élargi)' : ''}</span><span class="chip">Depuis <b>${fdate(d.since)}</b></span>
+    <span class="chip">Rayon <b>${nf(d.radius)} m</b>${d.widened ? ' (élargi)' : ''}</span><span class="chip">Depuis <b>${fdate(d.since)}</b></span><span class="chip${d.fallback ? ' warn' : ''}">Source : <b>${esc(d.source || 'DVF Etalab, décembre 2025')}</b></span>${d.lastSale ? `<span class="chip">Dernière vente <b>${new Date(d.lastSale).toLocaleDateString('fr-FR')}</b></span>` : ''}
     ${d.removed ? `<span class="chip">${d.removed} valeur${d.removed > 1 ? 's' : ''} aberrante${d.removed > 1 ? 's' : ''} exclue${d.removed > 1 ? 's' : ''}</span>` : ''}
     ${d.n < MIN_COMPARABLES ? '<span class="chip warn">Échantillon faible</span>' : ''}
     ${d.offline ? `<span class="chip warn">Hors ligne · cache du ${new Date(d.at).toLocaleDateString('fr-FR')}</span>` : ''}</div>`;
@@ -200,7 +200,7 @@ function renderResult(input, r, date, d) {
       <div class="legend"><span>${nf(d.q1)} €/m²</span><i></i><span>${nf(d.q3)} €/m²</span></div>
       <div class="tablewrap"><table id="comps"><thead><tr><th>Date</th><th>Adresse / parcelle</th><th class="n">Surf.</th><th class="n">Prix</th><th class="n">€/m²</th><th class="n">Dist.</th></tr></thead><tbody>${compRows(d)}</tbody></table></div>
       ${d.n > 15 ? `<button type="button" class="btn sm ghost" id="allComps">Voir les ${d.n} ventes</button>` : ''}
-      <ul class="notes"><li>Source : DVF (DGFiP) via l’API open data du Cerema, mutations d’un seul logement, ${d.removed} valeur(s) exclue(s) par la règle 1,5 × IQR. Adresses approximatives (géocodage inverse du centroïde de parcelle).</li></ul></div>` : ''}`;
+      <ul class="notes"><li>Source : ${esc(d.source || 'DVF Etalab, décembre 2025')}${d.lastSale ? ` (vente la plus récente retenue : ${new Date(d.lastSale).toLocaleDateString('fr-FR')})` : ''}, mutations d’un seul logement, ${d.removed} valeur(s) exclue(s) par la règle 1,5 × IQR. Adresses approximatives (géocodage inverse du centroïde de parcelle).</li></ul></div>` : ''}`;
   $('edit').onclick = () => f.scrollIntoView({ behavior: 'smooth' });
   $('allComps')?.addEventListener('click', (e) => { $('comps').tBodies[0].innerHTML = compRows(d, true); e.target.remove(); reverseAddresses(el); });
   if (d && d.n && navigator.onLine !== false) reverseAddresses(el);

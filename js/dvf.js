@@ -1,6 +1,10 @@
-// Module DVF — prix/m² à proximité à partir des ventes DVF (Cerema « DVF open data », CORS ouvert).
+// Module DVF — prix/m² à proximité. Source principale : fichiers Etalab geo-dvf précalculés en JSON par commune
+// (data/dvf/<dep>/, servis par le site lui-même, cf. tools/build-dvf.py). Repli : API Cerema « DVF open data » (CORS ouvert).
 // Logique pure (filtres, médiane, IQR) testable sous Node ; fonctions réseau isolées.
 export const GEOCODE_URL = 'https://api-adresse.data.gouv.fr/search/';
+export const LOCAL_BASE = new URL('../data/dvf/', import.meta.url).href;
+export const SOURCE_LABEL = 'DVF Etalab, décembre 2025';
+export const FALLBACK_LABEL = 'DVF (Cerema / DGFiP), source de secours';
 export const DVF_URL = 'https://apidf-preprod.cerema.fr/dvf_opendata/geomutations/';
 // codtypbien Cerema : 111 = une maison, 121 = un appartement (mutation d'un seul logement).
 export const TYPE_CODES = { appartement: '121', maison: '111' };
@@ -90,6 +94,21 @@ export function sinceDate(years = 3, now = new Date()) {
   const d = new Date(now); d.setFullYear(d.getFullYear() - years); return d.toISOString().slice(0, 10);
 }
 
+// Ligne compacte Etalab [date, prix, surface, type, lat, lon, terrain, vefa, parcelle] -> vente normalisée
+export function normalizeRow(r, subject, commune = '') {
+  const [date, prix, surface, t, lat, lon, terrain, vefa, parcelle] = r;
+  if (!(prix > 0) || !(surface > 0)) return null;
+  return { id: `${commune}-${date}-${parcelle}-${prix}-${surface}`, date, prix, surface, prixM2: prix / surface,
+    type: t === 'm' ? 'maison' : t === 'a' ? 'appartement' : 'autre', nature: vefa ? "Vente en l'état futur d'achèvement" : 'Vente', vefa: !!vefa,
+    parcelle: parcelle || '', terrain: terrain || 0, lat, lon, distance: subject ? Math.round(distance(subject.lat, subject.lon, lat, lon)) : null };
+}
+// Communes dont l'emprise (bbox des ventes) élargie du rayon contient le point.
+export function communesNear(index, lat, lon, radius) {
+  const dLat = radius / 111320, dLon = radius / (111320 * Math.cos(lat * Math.PI / 180));
+  return Object.entries(index.communes || {}).filter(([, c]) => { const [w, s, e, n] = c.bbox; return lon >= w - dLon && lon <= e + dLon && lat >= s - dLat && lat <= n + dLat; }).map(([k]) => k);
+}
+export const depOf = (citycode) => (!citycode ? '06' : /^97/.test(citycode) ? citycode.slice(0, 3) : citycode.slice(0, 2));
+
 // ---------- Réseau ----------
 export async function geocode(q, { limit = 5, fetchFn = fetch } = {}) {
   const r = await fetchFn(`${GEOCODE_URL}?q=${encodeURIComponent(q)}&limit=${limit}`);
@@ -120,6 +139,24 @@ async function fetchTile(t, { minYear, type, fetchFn, lat, lon, seen, onProgress
     url = j.next ? j.next.replace(/^http:/, 'https:') : null;
   }
 }
+const jsonCache = new Map();
+async function getLocal(url, fetchFn) {
+  if (!jsonCache.has(url)) jsonCache.set(url, (async () => { const r = await fetchFn(url); if (!r.ok) throw new Error(`Données DVF Etalab indisponibles (${r.status})`); return r.json(); })().catch((e) => { jsonCache.delete(url); throw e; }));
+  return jsonCache.get(url);
+}
+export async function fetchSalesLocal({ lat, lon, radius, type, citycode, years = 3, fetchFn = fetch, onProgress, base = LOCAL_BASE }) {
+  const dep = depOf(citycode);
+  const index = await getLocal(`${base}${dep}/index.json`, fetchFn);
+  const codes = communesNear(index, lat, lon, radius);
+  if (citycode && index.communes?.[citycode] && !codes.includes(citycode)) codes.push(citycode);
+  if (!codes.length) throw new Error('Adresse hors de la zone couverte par les données DVF Etalab');
+  const minYear = String(new Date().getFullYear() - years), out = [];
+  for (const j of await Promise.all(codes.map((c) => getLocal(`${base}${dep}/${c}.json`, fetchFn)))) {
+    for (const r of j.rows) { if (r[0].slice(0, 4) < minYear) continue; const s = normalizeRow(r, { lat, lon }, j.commune); if (s && s.type === type && s.distance <= radius) out.push(s); }
+    onProgress?.(out.length);
+  }
+  return { sales: out, lastSale: index.derniere_vente || out.reduce((m, s) => (s.date > m ? s.date : m), '') };
+}
 export async function fetchSales({ lat, lon, radius, type, years = 3, fetchFn = fetch, onProgress }) {
   const minYear = new Date().getFullYear() - years;
   const seen = new Map();
@@ -127,7 +164,21 @@ export async function fetchSales({ lat, lon, radius, type, years = 3, fetchFn = 
   return [...seen.values()];
 }
 // Recherche complète : rayon demandé d'abord, puis élargissement (rayon, puis tolérance de surface) si trop peu de ventes.
-export async function priceNear({ lat, lon, type, surface, radius = 500, years = 3, autoWiden = true, fetchFn = fetch, onProgress }) {
+// Source Etalab (fichiers locaux) ; l'API Cerema n'est interrogée que si cette source échoue.
+export async function priceNear({ lat, lon, type, surface, citycode, radius = 500, years = 3, autoWiden = true, fetchFn = fetch, onProgress, base }) {
+  const since = sinceDate(years);
+  const maxR = autoWiden ? Math.max(radius, 2000) : radius;
+  try {
+    const { sales } = await fetchSalesLocal({ lat, lon, radius: maxR, type, citycode, years, fetchFn, onProgress, base });
+    const res = analyse(sales, { type, surface, radius, sinceDate: since, autoWiden });
+    const lastSale = res.kept.reduce((m, s) => (s.date > m ? s.date : m), '');
+    return { ...res, requestedRadius: radius, fetched: sales.length, since, lastSale, source: SOURCE_LABEL, fallback: false, at: Date.now() };
+  } catch (e) {
+    const r = await priceNearCerema({ lat, lon, type, surface, radius, years, autoWiden, fetchFn, onProgress });
+    return { ...r, fallback: true, fallbackReason: e.message };
+  }
+}
+export async function priceNearCerema({ lat, lon, type, surface, radius = 500, years = 3, autoWiden = true, fetchFn = fetch, onProgress }) {
   const since = sinceDate(years);
   let sales = await fetchSales({ lat, lon, radius, type, years, fetchFn, onProgress });
   let res = analyse(sales, { type, surface, radius, sinceDate: since, autoWiden: false });
@@ -138,5 +189,6 @@ export async function priceNear({ lat, lon, type, surface, radius = 500, years =
       if (res.n >= MIN_COMPARABLES || r >= 1500) break;
     }
   }
-  return { ...res, requestedRadius: radius, fetched: sales.length, since, source: 'DVF (Cerema / DGFiP)', at: Date.now() };
+  const lastSale = res.kept.reduce((m, s) => (s.date > m ? s.date : m), '');
+  return { ...res, requestedRadius: radius, fetched: sales.length, since, lastSale, source: FALLBACK_LABEL, at: Date.now() };
 }

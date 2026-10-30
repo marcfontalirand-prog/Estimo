@@ -1,5 +1,5 @@
 // Estimo v3 — changer VERSION à chaque déploiement pour forcer la mise à jour des clients.
-const VERSION = 'estimo-v3.0.0';
+const VERSION = 'estimo-v3.1.0';
 const PRECACHE = ['./', './index.html', './offline.html', './manifest.json', './css/app.css', './js/app.js', './js/engine.js', './js/data.js', './js/dvf.js',
   './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(VERSION).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting())); });

@@ -5,7 +5,8 @@ PWA d'estimation immobilière (Laforêt Le Cannet). Site statique : HTML/CSS/JS 
 ## Structure
 - `index.html`, `css/app.css`, `js/app.js` – interface (FR, mobile d'abord)
 - `js/engine.js` – moteur d'estimation pur (testable sous Node)
-- `js/dvf.js` – géocodage (API Adresse) + ventes DVF (API Cerema), filtres, médiane, exclusion IQR (logique pure testée)
+- `js/dvf.js` – géocodage (API Adresse) + ventes DVF (JSON Etalab précalculés, repli API Cerema), filtres, médiane, exclusion IQR (logique pure testée)
+- `data/dvf/<dep>/` – ventes DVF Etalab (geo-dvf) précalculées par commune + `index.json` (emprises) ; générées par `tools/build-dvf.py`
 - `js/data.js` – **tables éditables** : coefficients, pondérations, valeur des stationnements
 - `manifest.json`, `sw.js`, `offline.html`, `icons/`, `screenshots/` – PWA
 - `tests/engine.test.mjs`, `tests/dvf.test.mjs` – tests : `node --test tests/*.test.mjs`
@@ -19,7 +20,8 @@ PWA d'estimation immobilière (Laforêt Le Cannet). Site statique : HTML/CSS/JS 
 
 ## Prix/m² DVF
 - Géocodage : `https://api-adresse.data.gouv.fr/search/` (CORS `*`).
-- Ventes : API DVF open data du Cerema `https://apidf-preprod.cerema.fr/dvf_opendata/geomutations/` (CORS `*`, sans clé). Les fichiers `files.data.gouv.fr/geo-dvf` ne renvoient **pas** d'en-tête CORS et ne sont donc pas utilisables depuis le navigateur.
+- Source principale : **DVF Etalab, décembre 2025** (geo-dvf, ventes 2023-2025, département 06). Les fichiers geo-dvf n'ayant pas d'en-tête CORS, ils sont convertis en JSON compacts par commune (`python3 tools/build-dvf.py 06 2023 2024 2025`) et servis par le site ; l'app ne charge que l'index du département et les communes dont l'emprise touche le rayon.
+- Repli (si la source principale échoue) : API DVF open data du Cerema `https://apidf-preprod.cerema.fr/dvf_opendata/geomutations/` (CORS `*`, sans clé). Les fichiers `files.data.gouv.fr/geo-dvf` ne renvoient **pas** d'en-tête CORS et ne sont donc pas utilisables depuis le navigateur.
 - Requête par emprise (l'API limite à 0,02° × 0,02° : découpage en tuiles), `codtypbien` 121 (un appartement) ou 111 (une maison), années ≥ année courante − 3 (ou − 2).
 - Filtres : même type, nature « Vente », date ≥ aujourd'hui − 3 ans, distance au centroïde de parcelle ≤ rayon (500 m par défaut, réglable), surface ±35 %, 300–60 000 €/m².
 - Élargissement automatique si < 8 comparables : rayon 750 → 1 000 → 1 500 m, puis tolérance de surface ±60 %, puis sans filtre de surface.
