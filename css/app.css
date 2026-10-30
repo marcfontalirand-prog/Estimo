@@ -1,0 +1,26 @@
+:root{--bg:#0f1720;--card:#18222d;--fg:#e8edf2;--mut:#9aa7b4;--acc:#d4b072;--err:#ff7b72;--r:14px}
+*{box-sizing:border-box}body{margin:0;font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--fg);padding-bottom:env(safe-area-inset-bottom)}
+.top{position:sticky;top:0;z-index:5;background:var(--bg);padding:.6rem 1rem;border-bottom:1px solid #263241;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.5rem}
+h1{margin:0;font-size:1.3rem;color:var(--acc)}nav{display:flex;gap:.3rem}
+button{font:inherit;border:1px solid #33414f;background:var(--card);color:var(--fg);padding:.55rem .9rem;border-radius:10px;cursor:pointer}
+button.active,button.primary{background:var(--acc);color:#1a1405;border-color:var(--acc);font-weight:600}
+main{max-width:860px;margin:auto;padding:1rem}
+fieldset{border:1px solid #263241;border-radius:var(--r);background:var(--card);margin:0 0 1rem;padding:1rem;display:grid;gap:.75rem;grid-template-columns:1fr}
+@media(min-width:640px){fieldset{grid-template-columns:1fr 1fr}}
+legend{color:var(--acc);font-weight:600;padding:0 .4rem}
+label{display:flex;flex-direction:column;gap:.25rem;font-size:.85rem;color:var(--mut)}
+label.chk{flex-direction:row;align-items:center;gap:.5rem;color:var(--fg)}
+input,select{font:inherit;color:var(--fg);background:#0f1720;border:1px solid #33414f;border-radius:10px;padding:.6rem;min-height:44px}
+input[type=checkbox]{min-height:auto;width:20px;height:20px}
+input.bad{border-color:var(--err)}.err{color:var(--err);font-size:.8rem}
+.note{font-size:.8rem;color:var(--mut);grid-column:1/-1;margin:0}
+.actions{display:flex;gap:.5rem;flex-wrap:wrap;margin:1rem 0}
+#errors{color:var(--err)}
+.card{background:var(--card);border-radius:var(--r);padding:1rem;margin:1rem 0;border:1px solid #263241}
+.big{font-size:2rem;font-weight:700;color:var(--acc)}
+table{width:100%;border-collapse:collapse;font-size:.9rem}td,th{padding:.4rem;border-bottom:1px solid #263241;text-align:left}td.n{text-align:right;white-space:nowrap}
+.pos{color:#7ee787}.neg{color:var(--err)}
+.hist-item{display:flex;justify-content:space-between;gap:.5rem;align-items:center}
+body.is-maison .appart,body.is-appart .maison{display:none}
+footer{text-align:center;color:var(--mut);padding:1rem}
+@media print{body{background:#fff;color:#000}.no-print,#view-form form,#errors{display:none!important}.card{border:1px solid #999;background:#fff}.big{color:#000}td,th{border-color:#ccc}}

@@ -1,206 +1,72 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Estimo</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0a0a0b">
-    <link rel="apple-touch-icon" href="icon-192.png">
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: { extend: { colors: { accent: '#c9a96e', ink: { 800: '#1a1a1a', 900: '#0a0a0b' } } } }
-        }
-    </script>
-    <style>
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .tab-content { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        .toast-enter { animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .view-enter { animation: scaleIn 0.3s ease-out forwards; }
-        @keyframes scaleIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
-        
-        input[type="datetime-local"]::-webkit-calendar-picker-indicator { 
-            filter: invert(0.5); 
-            cursor: pointer;
-        }
-        .dark input[type="datetime-local"]::-webkit-calendar-picker-indicator { 
-            filter: invert(1); 
-        }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Estimo – Estimation immobilière</title>
+<meta name="description" content="Estimo : estimation de biens immobiliers sur la Côte d'Azur, hors ligne.">
+<meta name="theme-color" content="#0f1720">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<link rel="stylesheet" href="./css/app.css">
+<script type="module" src="./js/app.js"></script>
 </head>
-<body class="bg-stone-50 dark:bg-ink-900 text-stone-800 dark:text-stone-100 antialiased font-sans overflow-x-hidden selection:bg-accent/30 selection:text-accent">
-    <div id="root"></div>
-
-    <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
-        const TABS = ['client', 'bien', 'technique', 'financier', 'medias'];
-        const TAB_LABELS = { client: 'Client', bien: 'Bien', technique: 'Technique', financier: 'Financier', medias: 'Médias' };
-
-        const Field = ({ label, type = 'text', value, onChange, readOnly = false }) => (
-            <label className="flex flex-col mb-4 w-full group">
-                <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-stone-500 dark:text-stone-500 mb-2 ml-0.5 transition-colors group-focus-within:text-accent">{label}</span>
-                <input type={type} value={value} onChange={onChange} readOnly={readOnly} className={`w-full h-12 px-4 rounded-2xl text-[15px] bg-white/70 dark:bg-white/[0.04] border border-stone-200/80 dark:border-white/[0.08] text-stone-900 dark:text-stone-100 placeholder:text-stone-400 outline-none backdrop-blur-xl transition-all duration-200 focus:border-accent/70 focus:bg-white dark:focus:bg-white/[0.07] focus:ring-4 focus:ring-accent/15 ${readOnly ? 'opacity-70 cursor-not-allowed' : ''}`} />
-            </label>
-        );
-
-        const SectionTitle = ({ icon, title, subtitle }) => (
-            <div className="flex items-center gap-3 mb-6">
-                <div className="flex items-center justify-center w-10 h-10 rounded-2xl bg-accent/10 border border-accent/20 text-accent">
-                    <i data-lucide={icon} className="w-[18px] h-[18px]"></i>
-                </div>
-                <div>
-                    <h2 className="text-lg font-semibold tracking-tight text-stone-900 dark:text-white">{title}</h2>
-                    <p className="text-xs text-stone-500">{subtitle}</p>
-                </div>
-            </div>
-        );
-
-        function getEmptyClient() {
-            return {
-                id: Date.now(), date: new Date().toLocaleDateString('fr-FR'),
-                nom: '', prenom: '', telephone: '', email: '', adresse: '', typeBien: 'Appartement', rdv: '',
-                surfaceHabitable: '', surfaceCarrez: '', annexes: { terrasse: '', balcon: '', jardin: '', cave: '', garage: '' },
-                distribution: { pieces: '', chambres: '', sainte: '', hauteurPlafond: '' },
-                env: { exposition: '', visAVis: '', bruit: '' },
-                chauffage: { type: '', energie: '', age: '' },
-                menuiseries: { vitrage: '', fenetres: '', volets: '', isolation: '' },
-                equipements: { cuisineEquipee: false, stationnement: false, climatisation: false },
-                travaux: { nature: '', dates: '', factures: false },
-                etat: { humidite: false, fissures: false, toiture: '', notesEtat: '' },
-                charges: { fonciere: '', copro: '' },
-                copro: { travauxVotes: '', ambiance: '' },
-                projet: { raison: '', delai: 'Moyen', prixAttendu: '' },
-                medias: []
-            };
-        }
-
-        function hydrateClient(data) {
-            const base = getEmptyClient();
-            if (!data || typeof data !== 'object') return base;
-            return {
-                ...base,
-                ...data,
-                rdv: data.rdv || '',
-                annexes: { ...base.annexes, ...(data.annexes || {}) },
-                distribution: { ...base.distribution, ...(data.distribution || {}) },
-                env: { ...base.env, ...(data.env || {}) },
-                chauffage: { ...base.chauffage, ...(data.chauffage || {}) },
-                menuiseries: { ...base.menuiseries, ...(data.menuiseries || {}) },
-                equipements: { ...base.equipements, ...(data.equipements || {}) },
-                travaux: { ...base.travaux, ...(data.travaux || {}) },
-                etat: { ...base.etat, ...(data.etat || {}) },
-                charges: { ...base.charges, ...(data.charges || {}) },
-                copro: { ...base.copro, ...(data.copro || {}) },
-                projet: { ...base.projet, ...(data.projet || {}) },
-                medias: Array.isArray(data.medias) ? data.medias : []
-            };
-        }
-
-        function formatRdvDate(dateStr) {
-            if (!dateStr) return 'Date non définie';
-            const d = new Date(dateStr);
-            if (isNaN(d.getTime())) return 'Date invalide';
-            return d.toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-        }
-
-        function App() {
-            const [view, setView] = useState(() => {
-                const hash = window.location.hash.replace('#', '');
-                if (hash === 'list') return 'list';
-                if (hash === 'calendar') return 'calendar';
-                if (hash === 'form') return 'form';
-                return localStorage.getItem('immo_draft') ? 'form' : 'home';
-            }); 
-            
-            const [clients, setClients] = useState(() => {
-                const saved = localStorage.getItem('immo_clients');
-                if (!saved) return [];
-                try {
-                    const parsed = JSON.parse(saved);
-                    if (Array.isArray(parsed)) {
-                        return parsed.map(hydrateClient);
-                    }
-                    return [];
-                } catch(e) { return []; }
-            });
-
-            const [currentClient, setCurrentClient] = useState(() => {
-                const draft = localStorage.getItem('immo_draft');
-                if (draft) {
-                    try {
-                        const parsed = JSON.parse(draft);
-                        if (typeof parsed === 'object') return hydrateClient(parsed);
-                    } catch(e) {}
-                }
-                return getEmptyClient();
-            });
-            
-            const [activeTab, setActiveTab] = useState('client');
-            const [isMenuOpen, setIsMenuOpen] = useState(false);
-            const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
-            const [theme, setTheme] = useState(() => localStorage.getItem('immo_theme') || 'dark');
-            
-            // DVF State
-            const [dvfLoading, setDvfLoading] = useState(false);
-            const [dvfResult, setDvfResult] = useState("Saisissez l'adresse dans l'onglet Client pour comparer.");
-
-            useEffect(() => {
-                const handleHashChange = () => {
-                    const hash = window.location.hash.replace('#', '');
-                    if (hash === 'list') setView('list');
-                    else if (hash === 'calendar') setView('calendar');
-                    else if (hash === 'form') setView('form');
-                    else setView('home');
-                };
-                window.addEventListener('hashchange', handleHashChange);
-                if (view === 'form' && window.location.hash !== '#form') {
-                    window.history.replaceState(null, null, '#form');
-                }
-                return () => window.removeEventListener('hashchange', handleHashChange);
-            }, [view]);
-
-            const navigate = (newView) => {
-                window.location.hash = newView === 'home' ? '' : newView;
-                setView(newView);
-                setIsMenuOpen(false);
-            };
-
-            useEffect(() => {
-                const root = window.document.documentElement;
-                if (theme === 'dark') {
-                    root.classList.add('dark');
-                } else {
-                    root.classList.remove('dark');
-                }
-                localStorage.setItem('immo_theme', theme);
-            }, [theme]);
-
-            const showNotification = (msg, type = 'success') => {
-                setToast({ show: true, message: msg, type });
-                setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
-            };
-
-            const [touchStart, setTouchStart] = useState(null);
-            const [touchEnd, setTouchEnd] = useState(null);
-
-            const handleTouchStart = (e) => { setTouchEnd(null); setTouchStart(e.targetTouches[0].clientX); };
-            const handleTouchMove = (e) => { setTouchEnd(e.targetTouches[0].clientX); };
-            const handleTouchEnd = () => {
-                if (!touchStart || !touchEnd) return;
-                const distance = touchStart - touchEnd;
-                const currentIndex = TABS.indexOf(activeTab);
-                if (distance > 50 && currentIndex < TABS.length - 1) setActiveTab(TABS[currentIndex + 1]);
-                if (distance < -50 && currentIndex > 0) setActiveTab(TABS[currentIndex - 1]);
-                setTouchStart(null); setTouchEnd(null);
-            };
-
-            useEffect(() => {
+<body>
+<header class="top no-print">
+  <h1>Estimo</h1>
+  <nav>
+    <button data-view="form" class="active">Estimer</button>
+    <button data-view="history">Historique</button>
+    <button data-view="settings">Prix/m²</button>
+  </nav>
+</header>
+<main>
+<section id="view-form">
+<form id="f" novalidate>
+  <fieldset><legend>Bien</legend>
+    <label>Adresse / référence<input name="adresse" autocomplete="off"></label>
+    <label>Type de bien<select name="type"><option value="appartement">Appartement</option><option value="maison">Maison</option></select></label>
+    <label>Commune / secteur<select name="secteur" id="secteur"></select></label>
+    <label>Prix/m² de référence (€)<input name="prixM2" type="number" inputmode="numeric" min="500" step="10"></label>
+    <label class="chk"><input type="checkbox" name="prixVerifie"> Prix/m² vérifié (DVF / ventes récentes)</label>
+    <p class="note" id="srcnote"></p>
+  </fieldset>
+  <fieldset><legend>Surfaces & pièces</legend>
+    <label>Surface habitable (m²)*<input name="surface" type="number" inputmode="decimal" min="9" step="0.01" required></label>
+    <label>Pièces*<input name="pieces" type="number" inputmode="numeric" min="1" required></label>
+    <label>Chambres<input name="chambres" type="number" inputmode="numeric" min="0"></label>
+    <label class="maison">Terrain (m²)<input name="terrain" type="number" inputmode="numeric" min="0"></label>
+    <label>Balcon (m²)<input name="balcon" type="number" inputmode="decimal" min="0"></label>
+    <label>Terrasse (m²)<input name="terrasse" type="number" inputmode="decimal" min="0"></label>
+    <label class="appart">Jardin privatif (m²)<input name="jardin" type="number" inputmode="decimal" min="0"></label>
+  </fieldset>
+  <fieldset><legend>Caractéristiques</legend>
+    <label class="appart">Étage (0 = RDC)<input name="etage" type="number" inputmode="numeric" min="-1"></label>
+    <label class="chk appart"><input type="checkbox" name="ascenseur"> Ascenseur</label>
+    <label class="chk appart"><input type="checkbox" name="dernierEtage"> Dernier étage</label>
+    <label>État<select name="etat"><option value="">— non renseigné —</option><option value="neuf">Neuf / VEFA</option><option value="refait">Refait à neuf</option><option value="bon">Bon état</option><option value="rafraichir">À rafraîchir</option><option value="travaux">Travaux importants</option><option value="renover">À rénover entièrement</option></select></label>
+    <label>DPE<select name="dpe"><option value="">— non renseigné —</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option value="NC">Non communiqué</option></select></label>
+    <label>Exposition<select name="exposition"><option value="">— non renseignée —</option><option value="sud">Sud</option><option value="sud-ouest">Sud-ouest</option><option value="sud-est">Sud-est</option><option value="ouest">Ouest</option><option value="est">Est</option><option value="nord">Nord</option><option value="traversant">Traversant</option></select></label>
+    <label>Vue<select name="vue"><option value="">— non renseignée —</option><option value="mer">Mer panoramique</option><option value="mer-partielle">Mer partielle</option><option value="degagee">Dégagée</option><option value="jardin">Sur jardin</option><option value="standard">Standard</option><option value="vis-a-vis">Vis-à-vis</option></select></label>
+    <label>Stationnement<select name="parking"><option value="aucun">Aucun</option><option value="exterieur">Place extérieure</option><option value="box">Box fermé</option><option value="garage">Garage</option></select></label>
+    <label class="chk"><input type="checkbox" name="piscine"> Piscine</label>
+    <label>Année de construction<input name="annee" type="number" inputmode="numeric" min="1600"></label>
+    <label class="appart">Charges copro (€/an)<input name="charges" type="number" inputmode="numeric" min="0"></label>
+    <label>Coefficient manuel agent (0,70–1,30)<input name="coefManuel" type="number" step="0.01" min="0.7" max="1.3" placeholder="1"></label>
+  </fieldset>
+  <div class="actions no-print">
+    <button type="submit" class="primary">Calculer</button>
+    <button type="button" id="reset">Nouveau</button>
+  </div>
+</form>
+<div id="errors" role="alert"></div>
+<section id="result" hidden></section>
+</section>
+<section id="view-history" hidden><h2>Historique</h2><div id="hist"></div></section>
+<section id="view-settings" hidden><h2>Prix/m² par secteur</h2><p class="note" id="srcnote2"></p><div id="sect"></div>
+<div class="actions"><button id="saveSect" class="primary">Enregistrer</button><button id="resetSect">Valeurs par défaut</button></div></section>
+</main>
+<footer class="no-print"><small>Estimo v2 – estimation indicative, ne remplace pas un avis de valeur argumenté.</small></footer>
+</body>
+</html>
