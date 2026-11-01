@@ -41,7 +41,7 @@ window.EstimoDVF={priceNear,geocode,SOURCE_LABEL,FALLBACK_LABEL,median,rentEstim
 const {useState,useEffect,useRef,useMemo,useCallback}=React;
 const STORE='estimo.v2.dossiers', THEME='estimo.v2.theme';
 const TYPES=['Appartement','Maison','Terrain','Immeuble','Local commercial','Parking / Box','Autre'];
-const TABS=[['client','Client'],['bien','Bien'],['technique','Technique'],['financier','Financier'],['medias','Médias']];
+const TABS=[['client','Client'],['bien','Bien'],['technique','Technique'],['financier','Financier'],['location','Location'],['medias','Médias']];
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const n=(v)=>{const x=parseFloat(String(v??'').replace(',','.').replace(/\s/g,''));return isFinite(x)?x:null};
 const eur=(v)=>v==null?'—':Math.round(v).toLocaleString('fr-FR')+' €';
@@ -85,15 +85,38 @@ if(d.medias.length)L.push(`Photos jointes au dossier : ${d.medias.length}`);L.pu
 function vcard(c){const e=(s)=>String(s||'').replace(/([,;\\])/g,'\\$1').replace(/\n/g,'\\n');return['BEGIN:VCARD','VERSION:3.0',`N:${e(c.nom)};${e(c.prenom)};;;`,`FN:${e([c.prenom,c.nom].filter(Boolean).join(' ')||'Client Estimo')}`,c.tel&&`TEL;TYPE=CELL:${e(c.tel)}`,c.email&&`EMAIL;TYPE=INTERNET:${e(c.email)}`,c.adresse&&`ADR;TYPE=HOME:;;${e(c.adresse)};;;;France`,`NOTE:${e('Vendeur — '+c.type+' (Estimo)')}`,'END:VCARD'].filter(Boolean).join('\r\n')}
 function download(name,text,mime){const b=new Blob([text],{type:mime});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
 
+
+const safeName=(d)=>([d.client.prenom,d.client.nom].filter(Boolean).join('-')||'client').replace(/[^\p{L}\p{N}-]+/gu,'_');
+function ficheImage(txt){const lines=[];const W=1080,pad=56,fs=26,lh=38;const c=document.createElement('canvas');const g=c.getContext('2d');g.font=`${fs}px sans-serif`;
+for(const raw of txt.split('\n')){let cur='';for(const w of raw.split(' ')){const t=cur?cur+' '+w:w;if(g.measureText(t).width>W-2*pad&&cur){lines.push(cur);cur=w}else cur=t}lines.push(cur)}
+c.width=W;c.height=pad*2+120+lines.length*lh;g.fillStyle='#fff';g.fillRect(0,0,W,c.height);g.fillStyle='#0b1f3a';g.fillRect(0,0,W,110);g.fillStyle='#fff';g.font='bold 44px sans-serif';g.fillText('Estimo — Fiche d’estimation',pad,72);
+let y=110+pad;for(const l of lines){const head=/^[A-ZÉÈ’ ()]{4,}$/.test(l.trim());g.font=(head?'bold ':'')+`${fs}px sans-serif`;g.fillStyle=head?'#1d3f73':'#0b1f3a';g.fillText(l,pad,y);y+=lh}
+return new Promise(r=>c.toBlob(b=>r(b),'image/png'))}
+async function shareFiche(d,say){const txt=fiche(d);const title='Fiche d’estimation Estimo';
+try{if(navigator.share){let files;try{const b=await ficheImage(txt);const f=new File([b],`fiche-${safeName(d)}.png`,{type:'image/png'});if(navigator.canShare&&navigator.canShare({files:[f]}))files=[f]}catch(e){}
+ try{await navigator.share(files?{title,text:txt,files}:{title,text:txt});return say('Fiche partagée ✓')}catch(e){if(e.name==='AbortError')return;if(files){await navigator.share({title,text:txt});return say('Fiche partagée ✓')}}}}catch(e){}
+await copyText(txt);say('Partage indisponible : fiche copiée dans le presse-papier ✓')}
+async function copyText(txt){try{await navigator.clipboard.writeText(txt)}catch(e){const t=document.createElement('textarea');t.value=txt;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove()}}
+async function shareContact(d,say){const name=safeName(d)+'.vcf',txt=vcard(d.client);const f=new File([txt],name,{type:'text/vcard'});
+if(navigator.share&&navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:'Contact '+name.replace('.vcf','')});return say('Contact partagé ✓')}catch(e){if(e.name==='AbortError')return}}
+download(name,txt,'text/vcard;charset=utf-8');say('Fichier contact téléchargé : ouvrez-le pour l’ajouter au carnet ✓')}
+const waLink=(d)=>{const tel=(d.client.tel||'').replace(/[^\d+]/g,'').replace(/^0(\d{9})$/,'33$1').replace(/^\+/,'');return `https://wa.me/${''}?text=${encodeURIComponent(fiche(d))}`};
+const mailLink=(d)=>`mailto:${encodeURIComponent(d.client.email||'')}?subject=${encodeURIComponent('Estimation de votre bien'+(d.client.adresse?' — '+d.client.adresse:''))}&body=${encodeURIComponent(fiche(d))}`;
+function ShareBar({d,compact}){const [msg,setMsg]=useState('');const say=(m)=>{setMsg(m);setTimeout(()=>setMsg(''),3500)};
+const B=({on,href,icon,label,cls=''})=>{const c=`glass-btn flex-1 min-w-0 rounded-xl px-2 py-2 text-xs font-semibold flex flex-col items-center gap-0.5 ${cls}`;return href?<a href={href} target="_blank" rel="noopener" className={c}><span className="text-lg leading-none">{icon}</span>{label}</a>:<button type="button" onClick={on} className={c}><span className="text-lg leading-none">{icon}</span>{label}</button>};
+return(<div data-testid="sharebar"><div className={`flex gap-1.5 ${compact?'':'glass rounded-2xl p-1.5'}`}>
+<B on={()=>shareFiche(d,say)} icon="📄" label="Fiche" cls="bg-navy-800 text-white"/><B on={()=>shareContact(d,say)} icon="👤" label="Contact" cls="glass"/><B href={waLink(d)} icon="💬" label="WhatsApp" cls="glass !text-emerald-700 dark:!text-emerald-300"/><B href={mailLink(d)} icon="✉️" label="Email" cls="glass"/><B on={async()=>{await copyText(fiche(d));say('Fiche copiée ✓')}} icon="📋" label="Copier" cls="glass"/></div>
+{msg&&<p className="text-xs mt-1 text-emerald-600 text-center">{msg}</p>}</div>)}
+
 function Home({list,open,create,del,dark,setDark}){const nb=list.length;return(<div className="max-w-3xl mx-auto px-4 pb-24" style={{paddingTop:'max(env(safe-area-inset-top),1rem)'}}>
-<header className="flex items-center justify-between mb-6"><div className="flex items-center gap-3"><Logo size={44}/><div><h1 className="text-2xl font-extrabold tracking-tight">Estimo</h1><p className="text-xs opacity-70">Estimation sur site · V2</p></div></div><button onClick={()=>setDark(!dark)} className="glass glass-btn rounded-full w-11 h-11 text-lg" aria-label="Mode sombre">{dark?'☀️':'🌙'}</button></header>
+<header className="flex items-center justify-between mb-6"><div className="flex items-center gap-3"><Logo size={44}/><div><h1 className="text-2xl font-extrabold tracking-tight">Estimo</h1><p className="text-xs opacity-70">Estimation sur site · V2.2</p></div></div><button onClick={()=>setDark(!dark)} className="glass glass-btn rounded-full w-11 h-11 text-lg" aria-label="Mode sombre">{dark?'☀️':'🌙'}</button></header>
 <div className="rounded-3xl p-5 mb-5 bg-gradient-to-br from-navy-800 to-navy-950 text-white shadow-xl"><p className="text-sm opacity-80">Dossiers enregistrés</p><p className="text-5xl font-extrabold my-1" data-testid="count">{nb}</p><p className="text-xs opacity-70">Stockés sur cet appareil (hors ligne)</p><button onClick={create} className="mt-4 w-full rounded-xl py-3 font-bold bg-white/15 backdrop-blur border border-white/30 glass-btn">＋ Nouvelle estimation</button></div>
 <h2 className="font-bold mb-3">Dossiers récents</h2>
 {nb===0&&<p className="glass rounded-2xl p-5 text-sm opacity-80">Aucun dossier pour l’instant. Créez votre première estimation.</p>}
-{[...list].sort((a,b)=>b.updated-a.updated).map(d=>{const S=surfRef(d),P=n(d.financier.prixAttendu);return(<div key={d.id} className="glass rounded-2xl p-4 mb-3 flex items-center gap-3">
+{[...list].sort((a,b)=>b.updated-a.updated).map(d=>{const S=surfRef(d),P=n(d.financier.prixAttendu);return(<div key={d.id} className="glass rounded-2xl p-4 mb-3"><div className="flex items-center gap-3">
 <button className="flex-1 text-left" onClick={()=>open(d.id)}><p className="font-semibold">{[d.client.prenom,d.client.nom].filter(Boolean).join(' ')||'Client sans nom'} <span className="text-xs font-normal opacity-60">· {d.client.type}</span></p><p className="text-sm opacity-75 truncate">{d.client.adresse||'Adresse non renseignée'}</p><p className="text-xs opacity-60 mt-1">{fmtDate(d.updated)}{S?` · ${S} m²`:''}{P?` · ${eur(P)}`:''}{d.medias.length?` · ${d.medias.length} photo(s)`:''}</p></button>
 <button onClick={()=>open(d.id)} className="glass glass-btn rounded-xl px-3 py-2 text-sm font-semibold">Ouvrir</button>
-<button onClick={()=>{if(confirm('Supprimer définitivement ce dossier ?'))del(d.id)}} className="glass glass-btn rounded-xl px-3 py-2 text-sm text-red-600" aria-label="Supprimer">🗑</button></div>)})}
+<button onClick={()=>{if(confirm('Supprimer définitivement ce dossier ?'))del(d.id)}} className="glass glass-btn rounded-xl px-3 py-2 text-sm text-red-600" aria-label="Supprimer">🗑</button></div><div className="mt-3"><p className="text-[10px] uppercase font-semibold opacity-60 mb-1">Partager</p><ShareBar d={d} compact/></div></div>)})}
 <p className="text-center text-xs opacity-50 mt-8">Sans publicité · Données DVF Etalab, décembre 2025</p></div>)}
 
 
@@ -129,14 +152,14 @@ return(<Card title="Comparatif DVF (300 m)"><p className="text-xs opacity-75 mb-
 
 function Tools({d,setDvf,setLoyer}){const [msg,setMsg]=useState('');const txt=fiche(d);
 const copy=async()=>{try{await navigator.clipboard.writeText(txt);setMsg('Fiche copiée dans le presse-papier ✓')}catch(e){const t=document.createElement('textarea');t.value=txt;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();setMsg('Fiche copiée ✓')}};
-const share=async()=>{if(navigator.share){try{await navigator.share({title:'Fiche d’estimation Estimo',text:txt})}catch(e){}}else{copy();setMsg('Partage indisponible sur ce navigateur : fiche copiée.')}};
-const vcf=()=>{const name=([d.client.prenom,d.client.nom].filter(Boolean).join('-')||'client').replace(/[^\p{L}\p{N}-]+/gu,'_');download(name+'.vcf',vcard(d.client),'text/vcard;charset=utf-8');setMsg('VCard générée ✓')};
-return(<><DvfPanel d={d} setDvf={setDvf}/><LoyerPanel d={d} setLoyer={setLoyer}/><Card title="Fiche d’estimation"><pre className="whitespace-pre-wrap text-xs bg-white/60 dark:bg-navy-950/60 rounded-xl p-3 max-h-80 overflow-auto" data-testid="fiche">{txt}</pre><div className="flex flex-wrap gap-2 mt-3"><Btn primary on={share}>Partager</Btn><Btn on={copy}>Copier</Btn><Btn on={vcf}>Export VCard (.vcf)</Btn></div>{msg&&<p className="text-sm mt-2 text-emerald-600">{msg}</p>}</Card></>)}
+const share=async()=>shareFiche(d,setMsg);const _old=async()=>{if(navigator.share){try{await navigator.share({title:'Fiche d’estimation Estimo',text:txt})}catch(e){}}else{copy();setMsg('Partage indisponible sur ce navigateur : fiche copiée.')}};
+const vcf=()=>shareContact(d,setMsg);const _oldv=()=>{const name=([d.client.prenom,d.client.nom].filter(Boolean).join('-')||'client').replace(/[^\p{L}\p{N}-]+/gu,'_');download(name+'.vcf',vcard(d.client),'text/vcard;charset=utf-8');setMsg('VCard générée ✓')};
+return(<><DvfPanel d={d} setDvf={setDvf}/><Card title="Fiche d’estimation"><pre className="whitespace-pre-wrap text-xs bg-white/60 dark:bg-navy-950/60 rounded-xl p-3 max-h-80 overflow-auto" data-testid="fiche">{txt}</pre><div className="flex flex-wrap gap-2 mt-3"><Btn primary on={share}>Partager</Btn><Btn on={copy}>Copier</Btn><Btn on={vcf}>Export VCard (.vcf)</Btn></div>{msg&&<p className="text-sm mt-2 text-emerald-600">{msg}</p>}</Card></>)}
 
 function Editor({d,update,back}){const [tab,setTab]=useState(0);const [drag,setDrag]=useState(0);const sx=useRef(null);const scroller=useRef(null);
 const set=(sec,k)=>(v)=>update(x=>({...x,[sec]:{...x[sec],[k]:v}}));
 const c=d.client,b=d.bien,t=d.technique,f=d.financier,S=surfRef(d),P=n(f.prixAttendu);
-const go=(i)=>{setTab(Math.max(0,Math.min(4,i)));window.scrollTo({top:0,behavior:'smooth'})};
+const go=(i)=>{setTab(Math.max(0,Math.min(TABS.length-1,i)));window.scrollTo({top:0,behavior:'smooth'})};
 const ts=(e)=>{const tg=e.target.closest('input,select,textarea,table,pre');if(tg)return;sx.current={x:e.touches[0].clientX,y:e.touches[0].clientY,lock:null}};
 const tm=(e)=>{const s=sx.current;if(!s)return;const dx=e.touches[0].clientX-s.x,dy=e.touches[0].clientY-s.y;if(s.lock==null&&(Math.abs(dx)>8||Math.abs(dy)>8))s.lock=Math.abs(dx)>Math.abs(dy);if(s.lock)setDrag(dx)};
 const te=()=>{const s=sx.current;sx.current=null;if(s&&s.lock){if(drag<-60)go(tab+1);else if(drag>60)go(tab-1)}setDrag(0)};
@@ -156,14 +179,15 @@ const panes=[
 <div className="rounded-2xl bg-navy-800 text-white p-4 text-center" data-testid="prixm2"><p className="text-xs uppercase opacity-80">Prix au m² (automatique)</p><p className="text-3xl font-extrabold">{P&&S?eur(P/S):'—'}</p><p className="text-xs opacity-70">{S?`sur ${S} m² ${n(b.carrez)?'Carrez':'habitables'}`:'Renseignez une surface dans l’onglet Bien'}</p>{d.dvf&&d.dvf.median&&P&&S?<p className="text-xs mt-2">Médiane DVF : {eur(d.dvf.median)}/m² · écart {((P/S/d.dvf.median-1)*100).toFixed(1).replace('.',',')} %</p>:null}</div>
 <Field label="Notes"><textarea className="inp mt-3" rows="2" value={f.notes} onChange={e=>set('financier','notes')(e.target.value)}/></Field></Card>
 <Tools d={d} setDvf={(v)=>update(x=>({...x,dvf:v}))} setLoyer={(v)=>update(x=>({...x,loyer:v}))}/></div>,
+<div key="l"><LoyerPanel d={d} setLoyer={(v)=>update(x=>({...x,loyer:v}))}/>{!d.dvf&&<p className="text-xs opacity-70 px-1">Astuce : lancez d’abord le comparatif DVF (onglet Financier) pour calculer le rendement sur le prix estimé ; sinon le prix attendu est utilisé.</p>}</div>,
 <div key="m"><Card title="Photos du bien"><p className="text-xs opacity-75 mb-3">Compression automatique à 800 px de large (JPEG).</p><div className="flex gap-2 mb-3"><Btn primary on={()=>camRef.current.click()} cls="flex-1">📷 Prendre une photo</Btn><Btn on={()=>fileRef.current.click()} cls="flex-1">🖼 Galerie</Btn></div>
 <input ref={camRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e=>{addPhotos([...e.target.files]);e.target.value=''}}/><input ref={fileRef} data-testid="gallery" type="file" accept="image/*" multiple className="hidden" onChange={e=>{addPhotos([...e.target.files]);e.target.value=''}}/>
 {busy&&<p className="text-sm">Compression…</p>}{d.medias.length===0&&<p className="text-sm opacity-70">Aucune photo.</p>}
 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">{d.medias.map(m=>(<div key={m.id} className="relative"><img src={m.data} className="rounded-xl w-full aspect-[4/3] object-cover"/><span className="absolute bottom-1 left-1 text-[10px] bg-black/50 text-white rounded px-1">{m.w}×{m.h}</span><button onClick={()=>update(x=>({...x,medias:x.medias.filter(y=>y.id!==m.id)}))} className="absolute top-1 right-1 glass rounded-full w-7 h-7 text-xs">✕</button></div>))}</div></Card></div>];
 return(<div className="min-h-screen pb-28"><header className="sticky top-0 z-20 glass !rounded-none px-3 pb-2" style={{paddingTop:'max(env(safe-area-inset-top),.6rem)'}}><div className="max-w-3xl mx-auto"><div className="flex items-center gap-2 mb-2"><button onClick={back} className="glass glass-btn rounded-full w-10 h-10" aria-label="Accueil">‹</button><Logo size={30}/><div className="flex-1 min-w-0"><p className="font-bold truncate">{[c.prenom,c.nom].filter(Boolean).join(' ')||'Nouveau dossier'}</p><p className="text-xs opacity-70 truncate">{c.type}{S?` · ${S} m²`:''} · enregistré automatiquement</p></div></div>
-<nav className="flex gap-1 overflow-x-auto">{TABS.map(([k,l],i)=>(<button key={k} onClick={()=>go(i)} className={`glass-btn flex-1 rounded-xl px-2 py-2 text-sm font-semibold whitespace-nowrap ${tab===i?'bg-navy-800 text-white shadow':'glass'}`}>{l}</button>))}</nav></div></header>
+<nav className="flex gap-1 overflow-x-auto mb-2">{TABS.map(([k,l],i)=>(<button key={k} onClick={()=>go(i)} className={`glass-btn flex-1 rounded-xl px-1 py-2 text-[11.5px] sm:text-sm font-semibold whitespace-nowrap ${tab===i?'bg-navy-800 text-white shadow':'glass'}`}>{l}</button>))}</nav><ShareBar d={d}/></div></header>
 <div className="overflow-hidden" style={{touchAction:"pan-y"}} onTouchStart={ts} onTouchMove={tm} onTouchEnd={te}><div className="track" style={{transform:`translateX(calc(${-tab*100}% + ${drag}px))`,transition:drag?'none':undefined}}>{panes.map((p,i)=>(<div key={i} className="pane px-4 pt-4" style={i===tab?{}:{height:0,overflow:'hidden'}}><div className="max-w-3xl mx-auto">{p}</div></div>))}</div></div>
-<div className="fixed bottom-0 inset-x-0 p-3 z-20" style={{paddingBottom:'max(env(safe-area-inset-bottom),.75rem)'}}><div className="max-w-3xl mx-auto flex gap-2"><Btn on={()=>go(tab-1)} cls={`flex-1 ${tab===0?'opacity-40':''}`}>‹ Précédent</Btn><Btn primary on={()=>tab===4?back():go(tab+1)} cls="flex-1">{tab===4?'Terminer ✓':'Suivant ›'}</Btn></div><p className="text-center text-[10px] opacity-50 mt-1">Glissez à gauche / à droite pour changer d’onglet</p></div></div>)}
+<div className="fixed bottom-0 inset-x-0 p-3 z-20" style={{paddingBottom:'max(env(safe-area-inset-bottom),.75rem)'}}><div className="max-w-3xl mx-auto flex gap-2"><Btn on={()=>go(tab-1)} cls={`flex-1 ${tab===0?'opacity-40':''}`}>‹ Précédent</Btn><Btn primary on={()=>tab===TABS.length-1?back():go(tab+1)} cls="flex-1">{tab===TABS.length-1?'Terminer ✓':'Suivant ›'}</Btn></div><p className="text-center text-[10px] opacity-50 mt-1">Glissez à gauche / à droite pour changer d’onglet</p></div></div>)}
 
 function App(){const [list,setList]=useState(load);const [cur,setCur]=useState(null);const [dark,setDark]=useState(()=>localStorage.getItem(THEME)?localStorage.getItem(THEME)==='dark':matchMedia('(prefers-color-scheme: dark)').matches);
 useEffect(()=>{document.documentElement.classList.toggle('dark',dark);localStorage.setItem(THEME,dark?'dark':'light');document.querySelector('meta[name=theme-color]').content=dark?'#061226':'#0b1f3a'},[dark]);
@@ -173,7 +197,14 @@ const create=()=>{const d=blank();commit([...list,d]);open(d.id)};
 const d=list.find(x=>x.id===cur);const update=(fn)=>setList(l=>{const nl=l.map(x=>x.id===cur?{...fn(x),updated:Date.now()}:x);save(nl);return nl});
 return d?<Editor key={d.id} d={d} update={update} back={back}/>:<Home list={list} open={open} create={create} del={(id)=>commit(list.filter(x=>x.id!==id))} dark={dark} setDark={setDark}/>}
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);document.getElementById('boot').remove();
-if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+if('serviceWorker' in navigator)addEventListener('load',async()=>{try{
+ const had=!!navigator.serviceWorker.controller;const reg=await navigator.serviceWorker.register('sw.js',{updateViaCache:'none'});
+ const show=()=>{if(document.getElementById('upd'))return;const b=document.createElement('div');b.id='upd';b.setAttribute('data-testid','update');b.className='fixed top-3 inset-x-3 z-50 rounded-2xl bg-navy-800 text-white shadow-2xl p-3 flex items-center gap-3';b.innerHTML='<span class="flex-1 text-sm font-semibold">Mise à jour disponible</span><button class="rounded-xl bg-white text-navy-900 px-3 py-2 text-sm font-bold">Recharger</button>';b.querySelector('button').onclick=()=>location.reload();document.body.appendChild(b)};
+ navigator.serviceWorker.addEventListener('controllerchange',()=>{if(had)show()});
+ reg.addEventListener('updatefound',()=>{const w=reg.installing;w&&w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller)show()})});
+ setInterval(()=>reg.update().catch(()=>{}),30*60*1000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)reg.update().catch(()=>{})});
+}catch(e){}});
+window.ESTIMO_VERSION='2.2.0';
 </script>
 </body>
 </html>
