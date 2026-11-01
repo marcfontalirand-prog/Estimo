@@ -2,99 +2,398 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Estimo – Estimation immobilière</title>
-<meta name="description" content="Estimo : estimation immobilière fondée sur les ventes DVF à proximité du bien.">
-<meta name="theme-color" content="#f6f5f2" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)">
-<link rel="manifest" href="./manifest.json">
-<link rel="icon" href="./icons/icon-192.png" type="image/png">
-<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-<link rel="stylesheet" href="./css/app.css">
-<script>try{const t=localStorage.getItem('estimo.theme');if(t)document.documentElement.dataset.theme=t}catch{}</script>
-<script type="module" src="./js/app.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Estimo — Estimation sur site</title>
+<meta name="description" content="Estimo V2 : dossiers d'estimation immobilière sur site, comparatif DVF à 300 m, fiche d'estimation et export VCard.">
+<meta name="theme-color" content="#0b1f3a">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/logo.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<script>tailwind.config={darkMode:'class',theme:{extend:{colors:{navy:{50:'#eef3fa',100:'#d6e1f1',200:'#adc3e3',400:'#5b7fb8',600:'#1d3f73',700:'#14305c',800:'#0e2447',900:'#0b1f3a',950:'#061226'}}}}}</script>
+<script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+<style>
+html,body{overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,sans-serif}
+.glass{background:rgba(255,255,255,.55);backdrop-filter:blur(14px) saturate(160%);-webkit-backdrop-filter:blur(14px) saturate(160%);border:1px solid rgba(255,255,255,.6);box-shadow:0 4px 18px rgba(11,31,58,.10)}
+.dark .glass{background:rgba(20,40,75,.45);border-color:rgba(255,255,255,.12);box-shadow:0 4px 18px rgba(0,0,0,.35)}
+.glass-btn{transition:transform .12s, background .2s}.glass-btn:active{transform:scale(.96)}
+.inp{width:100%;border-radius:.8rem;padding:.6rem .8rem;background:rgba(255,255,255,.85);border:1px solid #d6e1f1;outline:none;color:#0b1f3a}
+.inp{scroll-margin:96px 0 140px}.inp:focus{border-color:#1d3f73;box-shadow:0 0 0 3px rgba(29,63,115,.15)}
+.dark .inp{background:rgba(6,18,38,.6);border-color:#1d3f73;color:#eef3fa}
+.track{display:flex;transition:transform .28s cubic-bezier(.2,.8,.2,1);will-change:transform}
+.pane{flex:0 0 100%;min-width:0}
+#boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0b1f3a;color:#fff;font:600 18px sans-serif}
+</style>
 </head>
-<body>
-<a class="skip" href="#main">Aller au contenu</a>
-<header class="top no-print">
-  <div class="brand"><span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></span><span>Estimo</span></div>
-  <nav class="seg" aria-label="Navigation">
-    <button data-view="form" class="active" aria-current="page">Estimer</button>
-    <button data-view="history">Historique</button>
-  </nav>
-  <button id="theme" class="icon-btn" aria-label="Basculer thème clair/sombre" title="Thème"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
-</header>
-<main id="main">
-<section id="view-form">
-  <div class="hero no-print">
-    <h1>Estimez un bien en quelques minutes</h1>
-    <p>Prix au m² issu des ventes réelles (DVF) autour de l'adresse, ajusté selon les caractéristiques du bien.</p>
-  </div>
-<form id="f" novalidate>
-  <section class="card step" aria-labelledby="s1">
-    <header class="step-h"><span class="num">1</span><div><h2 id="s1">Le bien</h2><p>Adresse, type et surface</p></div></header>
-    <div class="field full addr">
-      <label for="adresse">Adresse du bien</label>
-      <div class="input-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
-      <input id="adresse" name="adresse" autocomplete="off" placeholder="ex. 12 boulevard Carnot, Le Cannet" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="sugg"></div>
-      <ul id="sugg" class="sugg" role="listbox" hidden></ul>
-      <input type="hidden" name="lat"><input type="hidden" name="lon"><input type="hidden" name="citycode">
-    </div>
-    <div class="field full"><span class="lbl" id="type-l">Type de bien</span>
-      <div class="toggle" role="radiogroup" aria-labelledby="type-l">
-        <label><input type="radio" name="type" value="appartement" checked><span>Appartement</span></label>
-        <label><input type="radio" name="type" value="maison"><span>Maison</span></label>
-      </div></div>
-    <div class="field"><label for="surface">Surface habitable</label><div class="unit"><input id="surface" name="surface" type="number" inputmode="decimal" min="9" step="0.01" required placeholder="65"><span>m²</span></div></div>
-    <div class="field"><label for="pieces">Pièces</label><input id="pieces" name="pieces" type="number" inputmode="numeric" min="1" required placeholder="3"></div>
-  </section>
+<body class="bg-navy-50 dark:bg-navy-950 text-navy-900 dark:text-navy-50 min-h-screen">
+<div id="boot">Estimo…</div>
+<div id="root"></div>
+<noscript>Estimo nécessite JavaScript.</noscript>
+<script>
+/* ===== Moteur DVF (copie générée depuis js/dvf.js — ne pas éditer ici) ===== */
+// Module DVF — prix/m² à proximité. Source principale : fichiers Etalab geo-dvf précalculés en JSON par commune
+// (data/dvf/<dep>/, servis par le site lui-même, cf. tools/build-dvf.py). Repli : API Cerema « DVF open data » (CORS ouvert).
+// Logique pure (filtres, médiane, IQR) testable sous Node ; fonctions réseau isolées.
+const GEOCODE_URL = 'https://api-adresse.data.gouv.fr/search/';
+const LOCAL_BASE = new URL('data/dvf/', document.baseURI).href;
+const SOURCE_LABEL = 'DVF Etalab, décembre 2025';
+const FALLBACK_LABEL = 'DVF (Cerema / DGFiP), source de secours';
+const DVF_URL = 'https://apidf-preprod.cerema.fr/dvf_opendata/geomutations/';
+// codtypbien Cerema : 111 = une maison, 121 = un appartement (mutation d'un seul logement).
+const TYPE_CODES = { appartement: '121', maison: '111' };
+const MAX_TILE = 0.019; // l'API refuse une emprise > 0,02° × 0,02°
+const RADIUS_STEPS = [300, 500, 750, 1000, 1500, 2000];
+const MIN_COMPARABLES = 8;
 
-  <section class="card step" aria-labelledby="s2">
-    <header class="step-h"><span class="num">2</span><div><h2 id="s2">Prix de référence DVF</h2><p>Ventes comparables autour du bien</p></div></header>
-    <div class="field full"><label for="rayon">Rayon de recherche <output id="rayon-o">500 m</output></label>
-      <input id="rayon" name="rayon" type="range" min="200" max="2000" step="50" value="500">
-      <label class="chk"><input type="checkbox" name="autoWiden" checked> Élargir auto. si moins de 8 ventes</label>
-      <label class="chk"><input type="checkbox" name="annees3" checked> 3 dernières années (sinon 2)</label>
-    </div>
-    <div id="dvf" class="dvf full" aria-live="polite"><p class="muted">Saisissez une adresse, le type et la surface pour interroger les ventes DVF.</p></div>
-    <div class="field"><label for="prixM2">Prix/m² de référence</label><div class="unit"><input id="prixM2" name="prixM2" type="number" inputmode="numeric" min="500" step="10"><span>€/m²</span></div></div>
-    <div class="field"><span class="lbl">Origine</span><p id="prixSrc" class="pill-src">—</p><input type="hidden" name="prixSource"><input type="checkbox" name="prixVerifie" hidden></div>
-  </section>
+const R = 6371000;
+function distance(lat1, lon1, lat2, lon2) {
+  const t = Math.PI / 180, dLat = (lat2 - lat1) * t, dLon = (lon2 - lon1) * t;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * t) * Math.cos(lat2 * t) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+function centroid(geom) {
+  if (!geom) return null;
+  if (geom.type === 'Point') return { lon: geom.coordinates[0], lat: geom.coordinates[1] };
+  const polys = geom.type === 'Polygon' ? [geom.coordinates] : geom.type === 'MultiPolygon' ? geom.coordinates : [];
+  let sx = 0, sy = 0, n = 0;
+  for (const p of polys) for (const [x, y] of p[0] || []) { sx += x; sy += y; n++; }
+  return n ? { lon: sx / n, lat: sy / n } : null;
+}
+function bboxTiles(lat, lon, radius) {
+  lat = Number(lat); lon = Number(lon);
+  const dLat = radius / 111320, dLon = radius / (111320 * Math.cos(lat * Math.PI / 180));
+  const [w, s, e, n] = [lon - dLon, lat - dLat, lon + dLon, lat + dLat];
+  const nx = Math.ceil((e - w) / MAX_TILE), ny = Math.ceil((n - s) / MAX_TILE);
+  const sx = (e - w) / nx, sy = (n - s) / ny, out = [];
+  for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) out.push([w + i * sx, s + j * sy, w + (i + 1) * sx, s + (j + 1) * sy].map((v) => v.toFixed(5)));
+  return out;
+}
+function quantile(sorted, q) {
+  if (!sorted.length) return NaN;
+  const pos = (sorted.length - 1) * q, lo = Math.floor(pos), hi = Math.ceil(pos);
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
+}
+const median = (arr) => quantile([...arr].sort((a, b) => a - b), 0.5);
+// Exclusion des valeurs aberrantes par la règle de Tukey (1,5 × IQR).
+function iqrFilter(values, k = 1.5) {
+  const s = [...values].sort((a, b) => a - b);
+  if (s.length < 4) return { kept: s, low: -Infinity, high: Infinity, removed: 0 };
+  const q1 = quantile(s, 0.25), q3 = quantile(s, 0.75), iqr = q3 - q1;
+  const low = q1 - k * iqr, high = q3 + k * iqr;
+  const kept = s.filter((v) => v >= low && v <= high);
+  return { kept, low, high, removed: s.length - kept.length };
+}
+// Feature GeoJSON Cerema -> vente normalisée
+function normalize(f, subject) {
+  const p = f.properties || {};
+  const c = centroid(f.geometry);
+  const prix = Number(p.valeurfonc), surface = Number(p.sbati);
+  if (!c || !(prix > 0) || !(surface > 0)) return null;
+  return {
+    id: p.idmutinvar || p.idopendata, date: p.datemut, prix, surface, prixM2: prix / surface,
+    type: p.codtypbien === '111' ? 'maison' : p.codtypbien === '121' ? 'appartement' : 'autre',
+    nature: p.libnatmut, vefa: !!p.vefa, parcelle: (p.l_idpar || [])[0] || '', terrain: Number(p.sterr) || 0,
+    lat: c.lat, lon: c.lon, distance: subject ? Math.round(distance(subject.lat, subject.lon, c.lat, c.lon)) : null,
+  };
+}
+// Sélection des comparables : même type, ventes récentes, rayon, surface proche, bornes de plausibilité.
+function selectComparables(sales, { type, surface, radius, sinceDate, surfaceTol = 0.35 }) {
+  return sales.filter((s) => s && s.type === type && /^Vente/.test(s.nature || 'Vente')
+    && (!sinceDate || s.date >= sinceDate) && (radius == null || s.distance <= radius)
+    && (!surface || (s.surface >= surface * (1 - surfaceTol) && s.surface <= surface * (1 + surfaceTol)))
+    && s.prixM2 >= 300 && s.prixM2 <= 60000);
+}
+function stats(comps) {
+  const f = iqrFilter(comps.map((c) => c.prixM2));
+  const kept = comps.filter((c) => c.prixM2 >= f.low && c.prixM2 <= f.high);
+  const s = f.kept;
+  return { n: kept.length, removed: f.removed, median: Math.round(quantile(s, 0.5)), q1: Math.round(quantile(s, 0.25)), q3: Math.round(quantile(s, 0.75)),
+    min: Math.round(s[0]), max: Math.round(s[s.length - 1]), kept, outliers: comps.filter((c) => !kept.includes(c)) };
+}
+// Élargissement automatique : rayon puis tolérance de surface, jusqu'à MIN_COMPARABLES.
+function analyse(sales, { type, surface, radius = 500, sinceDate, min = MIN_COMPARABLES, autoWiden = true }) {
+  const radii = autoWiden ? [radius, ...RADIUS_STEPS.filter((r) => r > radius)] : [radius];
+  const tols = autoWiden ? [0.35, 0.6, Infinity] : [0.35];
+  let best = null;
+  for (const tol of tols) for (const r of radii) {
+    const comps = selectComparables(sales, { type, surface: tol === Infinity ? 0 : surface, radius: r, sinceDate, surfaceTol: tol });
+    const st = comps.length ? stats(comps) : { n: 0, removed: 0, kept: [], outliers: [] };
+    best = { ...st, radius: r, surfaceTol: tol, widened: r !== radius || tol !== 0.35 };
+    if (st.n >= min) return best;
+  }
+  return best;
+}
+function sinceDate(years = 3, now = new Date()) {
+  const d = new Date(now); d.setFullYear(d.getFullYear() - years); return d.toISOString().slice(0, 10);
+}
 
-  <section class="card step" aria-labelledby="s3">
-    <header class="step-h"><span class="num">3</span><div><h2 id="s3">Surfaces & annexes</h2><p>Optionnel, affine l'estimation</p></div></header>
-    <div class="field"><label for="chambres">Chambres</label><input id="chambres" name="chambres" type="number" inputmode="numeric" min="0"></div>
-    <div class="field maison"><label for="terrain">Terrain</label><div class="unit"><input id="terrain" name="terrain" type="number" inputmode="numeric" min="0"><span>m²</span></div></div>
-    <div class="field"><label for="balcon">Balcon</label><div class="unit"><input id="balcon" name="balcon" type="number" inputmode="decimal" min="0"><span>m²</span></div></div>
-    <div class="field"><label for="terrasse">Terrasse</label><div class="unit"><input id="terrasse" name="terrasse" type="number" inputmode="decimal" min="0"><span>m²</span></div></div>
-    <div class="field appart"><label for="jardin">Jardin privatif</label><div class="unit"><input id="jardin" name="jardin" type="number" inputmode="decimal" min="0"><span>m²</span></div></div>
-    <div class="field"><label for="parking">Stationnement</label><select id="parking" name="parking"><option value="aucun">Aucun</option><option value="exterieur">Place extérieure</option><option value="box">Box fermé</option><option value="garage">Garage</option></select></div>
-  </section>
+// Ligne compacte Etalab [date, prix, surface, type, lat, lon, terrain, vefa, parcelle] -> vente normalisée
+function normalizeRow(r, subject, commune = '') {
+  const [date, prix, surface, t, lat, lon, terrain, vefa, parcelle] = r;
+  if (!(prix > 0) || !(surface > 0)) return null;
+  return { id: `${commune}-${date}-${parcelle}-${prix}-${surface}`, date, prix, surface, prixM2: prix / surface,
+    type: t === 'm' ? 'maison' : t === 'a' ? 'appartement' : 'autre', nature: vefa ? "Vente en l'état futur d'achèvement" : 'Vente', vefa: !!vefa,
+    parcelle: parcelle || '', terrain: terrain || 0, lat, lon, distance: subject ? Math.round(distance(subject.lat, subject.lon, lat, lon)) : null };
+}
+// Communes dont l'emprise (bbox des ventes) élargie du rayon contient le point.
+function communesNear(index, lat, lon, radius) {
+  const dLat = radius / 111320, dLon = radius / (111320 * Math.cos(lat * Math.PI / 180));
+  return Object.entries(index.communes || {}).filter(([, c]) => { const [w, s, e, n] = c.bbox; return lon >= w - dLon && lon <= e + dLon && lat >= s - dLat && lat <= n + dLat; }).map(([k]) => k);
+}
+const depOf = (citycode) => (!citycode ? '06' : /^97/.test(citycode) ? citycode.slice(0, 3) : citycode.slice(0, 2));
 
-  <section class="card step" aria-labelledby="s4">
-    <header class="step-h"><span class="num">4</span><div><h2 id="s4">Qualité & situation</h2><p>Chaque info renseignée resserre la fourchette</p></div></header>
-    <div class="field appart"><label for="etage">Étage (0 = RDC)</label><input id="etage" name="etage" type="number" inputmode="numeric" min="-1"></div>
-    <div class="field appart chks"><label class="chk"><input type="checkbox" name="ascenseur"> Ascenseur</label><label class="chk"><input type="checkbox" name="dernierEtage"> Dernier étage</label></div>
-    <div class="field"><label for="etat">État</label><select id="etat" name="etat"><option value="">Non renseigné</option><option value="neuf">Neuf / VEFA</option><option value="refait">Refait à neuf</option><option value="bon">Bon état</option><option value="rafraichir">À rafraîchir</option><option value="travaux">Travaux importants</option><option value="renover">À rénover entièrement</option></select></div>
-    <div class="field full"><span class="lbl" id="dpe-l">DPE</span><div class="dpe" role="radiogroup" aria-labelledby="dpe-l">
-      <label><input type="radio" name="dpe" value=""><span>?</span></label><label class="a"><input type="radio" name="dpe" value="A"><span>A</span></label><label class="b"><input type="radio" name="dpe" value="B"><span>B</span></label><label class="c"><input type="radio" name="dpe" value="C"><span>C</span></label><label class="d"><input type="radio" name="dpe" value="D"><span>D</span></label><label class="e"><input type="radio" name="dpe" value="E"><span>E</span></label><label class="f2"><input type="radio" name="dpe" value="F"><span>F</span></label><label class="g"><input type="radio" name="dpe" value="G"><span>G</span></label><label><input type="radio" name="dpe" value="NC"><span>NC</span></label></div></div>
-    <div class="field"><label for="exposition">Exposition</label><select id="exposition" name="exposition"><option value="">Non renseignée</option><option value="sud">Sud</option><option value="sud-ouest">Sud-ouest</option><option value="sud-est">Sud-est</option><option value="ouest">Ouest</option><option value="est">Est</option><option value="nord">Nord</option><option value="traversant">Traversant</option></select></div>
-    <div class="field"><label for="vue">Vue</label><select id="vue" name="vue"><option value="">Non renseignée</option><option value="mer">Mer panoramique</option><option value="mer-partielle">Mer partielle</option><option value="degagee">Dégagée</option><option value="jardin">Sur jardin</option><option value="standard">Standard</option><option value="vis-a-vis">Vis-à-vis</option></select></div>
-    <div class="field"><label for="annee">Année de construction</label><input id="annee" name="annee" type="number" inputmode="numeric" min="1600"></div>
-    <div class="field appart"><label for="charges">Charges copro</label><div class="unit"><input id="charges" name="charges" type="number" inputmode="numeric" min="0"><span>€/an</span></div></div>
-    <div class="field chks"><label class="chk"><input type="checkbox" name="piscine"> Piscine</label></div>
-    <div class="field"><label for="coefManuel">Coefficient agent</label><input id="coefManuel" name="coefManuel" type="number" step="0.01" min="0.7" max="1.3" placeholder="1,00"></div>
-  </section>
-  <div id="errors" role="alert" class="errors"></div>
-  <div class="bar no-print">
-    <button type="button" id="reset" class="btn ghost">Nouveau</button>
-    <button type="submit" class="btn primary">Calculer l'estimation</button>
-  </div>
-</form>
-<section id="result" hidden tabindex="-1"></section>
-</section>
-<section id="view-history" hidden><div class="hero"><h1>Historique</h1><p>Vos 200 dernières estimations, stockées sur cet appareil.</p></div><div id="hist"></div></section>
-</main>
-<footer class="no-print"><small>Estimo v3 · Données DVF Etalab, décembre 2025 (DGFiP) · Estimation indicative, ne remplace pas un avis de valeur argumenté.</small></footer>
+// ---------- Réseau ----------
+async function geocode(q, { limit = 5, fetchFn = fetch } = {}) {
+  const r = await fetchFn(`${GEOCODE_URL}?q=${encodeURIComponent(q)}&limit=${limit}`);
+  if (!r.ok) throw new Error(`Géocodage indisponible (${r.status})`);
+  const j = await r.json();
+  return (j.features || []).map((f) => ({ label: f.properties.label, city: f.properties.city, citycode: f.properties.citycode, score: f.properties.score, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] }));
+}
+// GET JSON avec 2 nouvelles tentatives (l'API Cerema est parfois lente ou coupe la connexion).
+async function getJson(url, fetchFn, tries = 3) {
+  let last;
+  for (let i = 0; i < tries; i++) {
+    try {
+      const r = await fetchFn(url, { cache: 'no-store' });
+      if (r.ok) return await r.json();
+      last = new Error(`API DVF indisponible (${r.status})`);
+      if (r.status < 500 && r.status !== 429) break;
+    } catch (e) { last = e; }
+    if (i < tries - 1) await new Promise((res) => setTimeout(res, 800 * (i + 1)));
+  }
+  throw last;
+}
+async function fetchTile(t, { minYear, type, fetchFn, lat, lon, seen, onProgress }) {
+  let url = `${DVF_URL}?in_bbox=${t.join(',')}&anneemut_min=${minYear}&codtypbien=${TYPE_CODES[type]}&page_size=500`;
+  for (let guard = 0; url && guard < 20; guard++) {
+    const j = await getJson(url, fetchFn);
+    for (const f of j.features || []) { const s = normalize(f, { lat, lon }); if (s && !seen.has(s.id)) seen.set(s.id, s); }
+    onProgress?.(seen.size);
+    url = j.next ? j.next.replace(/^http:/, 'https:') : null;
+  }
+}
+const jsonCache = new Map();
+async function getLocal(url, fetchFn) {
+  if (!jsonCache.has(url)) jsonCache.set(url, (async () => { const r = await fetchFn(url); if (!r.ok) throw new Error(`Données DVF Etalab indisponibles (${r.status})`); return r.json(); })().catch((e) => { jsonCache.delete(url); throw e; }));
+  return jsonCache.get(url);
+}
+async function fetchSalesLocal({ lat, lon, radius, type, citycode, years = 3, fetchFn = fetch, onProgress, base = LOCAL_BASE }) {
+  const dep = depOf(citycode);
+  const index = await getLocal(`${base}${dep}/index.json`, fetchFn);
+  const codes = communesNear(index, lat, lon, radius);
+  if (citycode && index.communes?.[citycode] && !codes.includes(citycode)) codes.push(citycode);
+  if (!codes.length) throw new Error('Adresse hors de la zone couverte par les données DVF Etalab');
+  const minYear = String(new Date().getFullYear() - years), out = [];
+  for (const j of await Promise.all(codes.map((c) => getLocal(`${base}${dep}/${c}.json`, fetchFn)))) {
+    for (const r of j.rows) { if (r[0].slice(0, 4) < minYear) continue; const s = normalizeRow(r, { lat, lon }, j.commune); if (s && s.type === type && s.distance <= radius) out.push(s); }
+    onProgress?.(out.length);
+  }
+  return { sales: out, lastSale: index.derniere_vente || out.reduce((m, s) => (s.date > m ? s.date : m), '') };
+}
+async function fetchSales({ lat, lon, radius, type, years = 3, fetchFn = fetch, onProgress }) {
+  const minYear = new Date().getFullYear() - years;
+  const seen = new Map();
+  await Promise.all(bboxTiles(lat, lon, radius).map((t) => fetchTile(t, { minYear, type, fetchFn, lat, lon, seen, onProgress })));
+  return [...seen.values()];
+}
+// Recherche complète : rayon demandé d'abord, puis élargissement (rayon, puis tolérance de surface) si trop peu de ventes.
+// Source Etalab (fichiers locaux) ; l'API Cerema n'est interrogée que si cette source échoue.
+async function priceNear({ lat, lon, type, surface, citycode, radius = 500, years = 3, autoWiden = true, fetchFn = fetch, onProgress, base }) {
+  const since = sinceDate(years);
+  const maxR = autoWiden ? Math.max(radius, 2000) : radius;
+  try {
+    const { sales } = await fetchSalesLocal({ lat, lon, radius: maxR, type, citycode, years, fetchFn, onProgress, base });
+    const res = analyse(sales, { type, surface, radius, sinceDate: since, autoWiden });
+    const lastSale = res.kept.reduce((m, s) => (s.date > m ? s.date : m), '');
+    return { ...res, requestedRadius: radius, fetched: sales.length, since, lastSale, source: SOURCE_LABEL, fallback: false, at: Date.now() };
+  } catch (e) {
+    const r = await priceNearCerema({ lat, lon, type, surface, radius, years, autoWiden, fetchFn, onProgress });
+    return { ...r, fallback: true, fallbackReason: e.message };
+  }
+}
+async function priceNearCerema({ lat, lon, type, surface, radius = 500, years = 3, autoWiden = true, fetchFn = fetch, onProgress }) {
+  const since = sinceDate(years);
+  let sales = await fetchSales({ lat, lon, radius, type, years, fetchFn, onProgress });
+  let res = analyse(sales, { type, surface, radius, sinceDate: since, autoWiden: false });
+  if (autoWiden && res.n < MIN_COMPARABLES) {
+    for (const r of RADIUS_STEPS.filter((x) => x > radius)) {
+      sales = await fetchSales({ lat, lon, radius: r, type, years, fetchFn, onProgress });
+      res = analyse(sales, { type, surface, radius, sinceDate: since, autoWiden: true });
+      if (res.n >= MIN_COMPARABLES || r >= 1500) break;
+    }
+  }
+  const lastSale = res.kept.reduce((m, s) => (s.date > m ? s.date : m), '');
+  return { ...res, requestedRadius: radius, fetched: sales.length, since, lastSale, source: FALLBACK_LABEL, at: Date.now() };
+}
+
+// Module loyers — Carte des loyers ANIL / Ministère du Logement (data/loyers/<dep>.json, cf. tools/build-loyers.py).
+const LOYERS_BASE = new URL('data/loyers/', document.baseURI).href;
+const MEUBLE_PRIME = 0.15; // hypothèse Estimo : prime meublé +15 % (la carte ne couvre que le non meublé)
+// Choix de l'indicateur : maison -> mai ; appartement 1-2 pièces -> app12, 3 pièces et plus -> app3, sinon app.
+function pickIndicator(c, type, pieces) {
+  if (!c) return null;
+  if (type === 'maison') return c.mai ? { key: 'mai', label: 'Maisons', v: c.mai } : null;
+  const k = pieces >= 3 ? 'app3' : pieces >= 1 ? 'app12' : 'app';
+  const key = c[k] ? k : 'app';
+  return c[key] ? { key, label: { app: 'Appartements', app12: 'Appartements 1-2 pièces', app3: 'Appartements 3 pièces et plus' }[key], v: c[key] } : null;
+}
+// Loyer mensuel (charges comprises) et rendement brut = loyer annuel / prix de vente.
+function rentEstimate(data, { citycode, type, surface, pieces, prixVente, meublePossible = true }) {
+  const c = data?.communes?.[citycode];
+  if (!c) throw new Error('Commune absente de la carte des loyers');
+  if (!(surface > 0)) throw new Error('Surface requise');
+  const ind = pickIndicator(c, type, pieces);
+  if (!ind) throw new Error('Pas d’indicateur pour ce type de bien');
+  const [m2, lo, hi, typpred, nbobs] = ind.v;
+  const vide = Math.round(m2 * surface), meuble = meublePossible ? Math.round(m2 * surface * (1 + MEUBLE_PRIME)) : null;
+  const rdt = (l) => (prixVente > 0 && l ? (l * 12) / prixVente : null);
+  return { commune: c.nom, citycode, indicateur: ind.label, m2, bas: Math.round(lo * surface), haut: Math.round(hi * surface), loM2: lo, hiM2: hi,
+    vide, meuble, rendementVide: rdt(vide), rendementMeuble: rdt(meuble), prixVente: prixVente || null, typpred, nbobs,
+    encadrement: !!c.encadrement, encadrementNote: data.encadrement_note, source: data.source, annee: data.annee, reference: data.reference };
+}
+
+window.EstimoDVF={priceNear,geocode,SOURCE_LABEL,FALLBACK_LABEL,median,rentEstimate,LOYERS_BASE,MEUBLE_PRIME};
+</script>
+<script type="text/babel" data-presets="react">
+const {useState,useEffect,useRef,useMemo,useCallback}=React;
+const STORE='estimo.v2.dossiers', THEME='estimo.v2.theme';
+const TYPES=['Appartement','Maison','Terrain','Immeuble','Local commercial','Parking / Box','Autre'];
+const TABS=[['client','Client'],['bien','Bien'],['technique','Technique'],['financier','Financier'],['medias','Médias']];
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const n=(v)=>{const x=parseFloat(String(v??'').replace(',','.').replace(/\s/g,''));return isFinite(x)?x:null};
+const eur=(v)=>v==null?'—':Math.round(v).toLocaleString('fr-FR')+' €';
+const pct=(x)=>x==null?'—':(x*100).toFixed(2).replace('.',',')+' %';
+const fmtDate=(t)=>new Date(t).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'});
+const blank=()=>({id:uid(),created:Date.now(),updated:Date.now(),
+ client:{type:'Appartement',nom:'',prenom:'',tel:'',email:'',adresse:''},
+ bien:{carrez:'',habitable:'',terrain:'',jardin:'',balcon:'',terrasse:'',cave:'',pieces:'',chambres:'',sdb:'',hsp:'',etage:'',ascenseur:false,exposition:'',visavis:'',bruit:'',vue:''},
+ technique:{chauffage:'',energie:'',isolation:'',menuiseries:'',dpe:'',annee:'',cuisine:false,parking:'',borneVE:false,climatisation:false,piscine:false,travaux:'',toiture:false,fissures:false,humidite:false,amiante:false,notesEtat:''},
+ financier:{taxeFonciere:'',charges:'',motivation:'',delai:'',prixAttendu:'',notes:''},
+ medias:[],dvf:null,loyer:null});
+const load=()=>{try{return JSON.parse(localStorage.getItem(STORE))||[]}catch(e){return[]}};
+const save=(l)=>{try{localStorage.setItem(STORE,JSON.stringify(l));return true}catch(e){alert('Stockage plein : supprimez des photos ou des dossiers.');return false}};
+const surfRef=(d)=>n(d.bien.carrez)||n(d.bien.habitable);
+const dvfType=(t)=>t==='Appartement'?'appartement':t==='Maison'?'maison':null;
+
+function Logo({size=40}){return(<svg width={size} height={size} viewBox="0 0 64 64" aria-label="Estimo"><rect width="64" height="64" rx="14" fill="#0b1f3a"/><path d="M12 31 32 14l20 17" fill="none" stroke="#fff" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M18 28v22h28V28" fill="none" stroke="#fff" strokeWidth="4.5" strokeLinejoin="round"/><path d="M27.5 33.5a4.5 4.5 0 1 1 6.4 4.1c-1.3.6-1.9 1.4-1.9 2.8v1" fill="none" stroke="#7fb0ff" strokeWidth="3.6" strokeLinecap="round"/><circle cx="32" cy="46" r="2.2" fill="#7fb0ff"/></svg>)}
+
+const Field=({label,children,hint})=>(<label className="block mb-3"><span className="block text-xs font-semibold uppercase tracking-wide text-navy-600 dark:text-navy-200 mb-1">{label}</span>{children}{hint&&<span className="block text-xs mt-1 opacity-70">{hint}</span>}</label>);
+const Txt=({v,on,type='text',ph,mode})=>(<input className="inp" type={type} inputMode={mode} value={v??''} placeholder={ph} onChange={e=>on(e.target.value)}/>);
+const Num=({v,on,ph,unit})=>(<div className="relative"><input className="inp pr-12" inputMode="decimal" value={v??''} placeholder={ph} onChange={e=>on(e.target.value)}/>{unit&&<span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm opacity-60">{unit}</span>}</div>);
+const Sel=({v,on,opts})=>(<select className="inp" value={v} onChange={e=>on(e.target.value)}><option value="">— Choisir —</option>{opts.map(o=><option key={o}>{o}</option>)}</select>);
+const Chk=({v,on,label})=>(<button type="button" onClick={()=>on(!v)} className={`glass glass-btn rounded-xl px-3 py-2 text-sm font-medium mr-2 mb-2 ${v?'!bg-navy-800 !text-white':''}`}>{v?'✓ ':''}{label}</button>);
+const Card=({title,children})=>(<section className="glass rounded-2xl p-4 mb-4">{title&&<h3 className="font-bold text-navy-800 dark:text-white mb-3">{title}</h3>}{children}</section>);
+const G2=({children})=>(<div className="grid grid-cols-2 gap-x-3">{children}</div>);
+const Btn=({children,on,primary,cls=''})=>(<button type="button" onClick={on} className={`glass-btn rounded-xl px-4 py-2.5 font-semibold ${primary?'bg-navy-800 text-white shadow-lg':'glass'} ${cls}`}>{children}</button>);
+
+async function compress(file,w=800){const url=URL.createObjectURL(file);try{const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url});const s=Math.min(1,w/img.width);const c=document.createElement('canvas');c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);return{data:c.toDataURL('image/jpeg',0.72),w:c.width,h:c.height}}finally{URL.revokeObjectURL(url)}}
+
+function fiche(d){const c=d.client,b=d.bien,t=d.technique,f=d.financier,S=surfRef(d),P=n(f.prixAttendu);const L=[];const add=(k,v)=>{if(v!==''&&v!=null&&v!==false)L.push(`• ${k} : ${v===true?'oui':v}`)};
+L.push('FICHE D\u2019ESTIMATION — ESTIMO','Date : '+fmtDate(Date.now()),'');
+L.push('CLIENT');add('Vendeur',[c.prenom,c.nom].filter(Boolean).join(' '));add('Téléphone',c.tel);add('Email',c.email);add('Adresse du bien',c.adresse);add('Type de bien',c.type);L.push('');
+L.push('BIEN');add('Surface Carrez',b.carrez&&b.carrez+' m²');add('Surface habitable',b.habitable&&b.habitable+' m²');add('Terrain',b.terrain&&b.terrain+' m²');add('Jardin',b.jardin&&b.jardin+' m²');add('Balcon',b.balcon&&b.balcon+' m²');add('Terrasse',b.terrasse&&b.terrasse+' m²');add('Cave / annexes',b.cave&&b.cave+' m²');add('Pièces',b.pieces);add('Chambres',b.chambres);add('Salles d\u2019eau / de bains',b.sdb);add('Hauteur sous plafond',b.hsp&&b.hsp+' m');add('Étage',b.etage);add('Ascenseur',b.ascenseur);add('Exposition',b.exposition);add('Vis-à-vis',b.visavis);add('Bruit',b.bruit);add('Vue',b.vue);L.push('');
+L.push('TECHNIQUE');add('Chauffage',[t.chauffage,t.energie].filter(Boolean).join(' — '));add('Isolation',t.isolation);add('Menuiseries',t.menuiseries);add('DPE',t.dpe);add('Année de construction',t.annee);add('Cuisine équipée',t.cuisine);add('Stationnement',t.parking);add('Borne de recharge VE',t.borneVE);add('Climatisation',t.climatisation);add('Piscine',t.piscine);add('Travaux réalisés',t.travaux);
+const w=[t.toiture&&'toiture',t.fissures&&'fissures',t.humidite&&'humidité',t.amiante&&'amiante / plomb à diagnostiquer'].filter(Boolean);add('Points d\u2019attention',w.join(', '));add('Remarques état',t.notesEtat);L.push('');
+L.push('FINANCIER');add('Taxe foncière',f.taxeFonciere&&eur(n(f.taxeFonciere))+' / an');add('Charges de copropriété',f.charges&&eur(n(f.charges))+' / an');add('Motivation de vente',f.motivation);add('Délai souhaité',f.delai);add('Prix attendu',P&&eur(P));if(P&&S)add('Prix attendu au m²',eur(P/S)+' /m²');L.push('');
+if(d.dvf&&d.dvf.median){const v=d.dvf;L.push('MARCHÉ (DVF)');add('Source',v.source+(v.fallback?' (secours)':''));add('Comparables',`${v.n} ventes ${v.type}s dans un rayon de ${v.radius} m depuis le ${v.since.split('-').reverse().join('/')}`);add('Prix médian',eur(v.median)+' /m²');add('Fourchette interquartile',`${eur(v.q1)} – ${eur(v.q3)} /m²`);if(S){add('Valeur indicative (médiane × surface)',eur(v.median*S));}if(P&&S)add('Écart prix attendu / médiane DVF',((P/S/v.median-1)*100).toFixed(1).replace('.',',')+' %');L.push('');}
+if(d.loyer){const l=d.loyer;L.push('LOCATIF');add('Loyer estimé vide',eur(l.vide)+' / mois charges comprises (fourchette '+eur(l.bas)+' – '+eur(l.haut)+')');if(l.meuble)add('Loyer estimé meublé',eur(l.meuble)+' / mois (hypothèse +15 %)');add('Rendement brut',pct(l.rendementVide)+' vide'+(l.meuble?' · '+pct(l.rendementMeuble)+' meublé':'')+(l.prixVente?' sur '+eur(l.prixVente):''));add('Référence',`${l.m2.toLocaleString('fr-FR')} €/m² — ${l.indicateur}, ${l.commune}`);add('Encadrement des loyers',l.encadrement?'oui, commune soumise à l’encadrement':'non applicable');add('Source',`${l.source}, ${l.annee}`);L.push('');}
+if(d.medias.length)L.push(`Photos jointes au dossier : ${d.medias.length}`);L.push('Estimation indicative, non contractuelle.');return L.join('\n')}
+
+function vcard(c){const e=(s)=>String(s||'').replace(/([,;\\])/g,'\\$1').replace(/\n/g,'\\n');return['BEGIN:VCARD','VERSION:3.0',`N:${e(c.nom)};${e(c.prenom)};;;`,`FN:${e([c.prenom,c.nom].filter(Boolean).join(' ')||'Client Estimo')}`,c.tel&&`TEL;TYPE=CELL:${e(c.tel)}`,c.email&&`EMAIL;TYPE=INTERNET:${e(c.email)}`,c.adresse&&`ADR;TYPE=HOME:;;${e(c.adresse)};;;;France`,`NOTE:${e('Vendeur — '+c.type+' (Estimo)')}`,'END:VCARD'].filter(Boolean).join('\r\n')}
+function download(name,text,mime){const b=new Blob([text],{type:mime});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
+
+function Home({list,open,create,del,dark,setDark}){const nb=list.length;return(<div className="max-w-3xl mx-auto px-4 pb-24" style={{paddingTop:'max(env(safe-area-inset-top),1rem)'}}>
+<header className="flex items-center justify-between mb-6"><div className="flex items-center gap-3"><Logo size={44}/><div><h1 className="text-2xl font-extrabold tracking-tight">Estimo</h1><p className="text-xs opacity-70">Estimation sur site · V2</p></div></div><button onClick={()=>setDark(!dark)} className="glass glass-btn rounded-full w-11 h-11 text-lg" aria-label="Mode sombre">{dark?'☀️':'🌙'}</button></header>
+<div className="rounded-3xl p-5 mb-5 bg-gradient-to-br from-navy-800 to-navy-950 text-white shadow-xl"><p className="text-sm opacity-80">Dossiers enregistrés</p><p className="text-5xl font-extrabold my-1" data-testid="count">{nb}</p><p className="text-xs opacity-70">Stockés sur cet appareil (hors ligne)</p><button onClick={create} className="mt-4 w-full rounded-xl py-3 font-bold bg-white/15 backdrop-blur border border-white/30 glass-btn">＋ Nouvelle estimation</button></div>
+<h2 className="font-bold mb-3">Dossiers récents</h2>
+{nb===0&&<p className="glass rounded-2xl p-5 text-sm opacity-80">Aucun dossier pour l’instant. Créez votre première estimation.</p>}
+{[...list].sort((a,b)=>b.updated-a.updated).map(d=>{const S=surfRef(d),P=n(d.financier.prixAttendu);return(<div key={d.id} className="glass rounded-2xl p-4 mb-3 flex items-center gap-3">
+<button className="flex-1 text-left" onClick={()=>open(d.id)}><p className="font-semibold">{[d.client.prenom,d.client.nom].filter(Boolean).join(' ')||'Client sans nom'} <span className="text-xs font-normal opacity-60">· {d.client.type}</span></p><p className="text-sm opacity-75 truncate">{d.client.adresse||'Adresse non renseignée'}</p><p className="text-xs opacity-60 mt-1">{fmtDate(d.updated)}{S?` · ${S} m²`:''}{P?` · ${eur(P)}`:''}{d.medias.length?` · ${d.medias.length} photo(s)`:''}</p></button>
+<button onClick={()=>open(d.id)} className="glass glass-btn rounded-xl px-3 py-2 text-sm font-semibold">Ouvrir</button>
+<button onClick={()=>{if(confirm('Supprimer définitivement ce dossier ?'))del(d.id)}} className="glass glass-btn rounded-xl px-3 py-2 text-sm text-red-600" aria-label="Supprimer">🗑</button></div>)})}
+<p className="text-center text-xs opacity-50 mt-8">Sans publicité · Données DVF Etalab, décembre 2025</p></div>)}
+
+
+
+function LoyerPanel({d,setLoyer}){const [st,setSt]=useState({});const type=dvfType(d.client.type),S=surfRef(d),L=d.loyer;
+const prixVente=d.dvf&&d.dvf.median&&S?Math.round(d.dvf.median*S):n(d.financier.prixAttendu);
+const run=async()=>{if(!type)return setSt({err:'L’estimation locative couvre les appartements et les maisons.'});if(!S)return setSt({err:'Renseignez une surface dans l’onglet Bien.'});if(!d.client.adresse)return setSt({err:'Renseignez l’adresse du bien.'});
+setSt({busy:true});try{let code=d.dvf&&d.dvf.citycode;if(!code){const g=(await EstimoDVF.geocode(d.client.adresse,{limit:1}))[0];if(!g)throw new Error('Adresse introuvable');code=g.citycode}
+const dep=code.slice(0,2);const r=await fetch(EstimoDVF.LOYERS_BASE+dep+'.json');if(!r.ok)throw new Error('Carte des loyers indisponible pour le département '+dep);
+const res=EstimoDVF.rentEstimate(await r.json(),{citycode:code,type,surface:S,pieces:n(d.bien.pieces)||0,prixVente});setLoyer({...res,baseVente:d.dvf&&d.dvf.median?'médiane DVF × surface':'prix attendu'});setSt({})}catch(e){setSt({err:'Estimation locative impossible : '+e.message})}};
+return(<Card title="Estimation locative"><p className="text-xs opacity-75 mb-3">Loyer au m² de la commune ({type==='maison'?'maisons':'appartements selon le nombre de pièces'}), appliqué à {S?S+' m²':'la surface'}. Rendement brut calculé sur le prix de vente estimé ({d.dvf&&d.dvf.median?'médiane DVF × surface':'prix attendu, faute de comparatif DVF'}).</p>
+<Btn primary on={run} cls="w-full">{st.busy?'Calcul…':'Estimer le loyer'}</Btn>{st.err&&<p className="text-sm text-red-600 mt-2">{st.err}</p>}
+{L&&<div className="mt-4" data-testid="loyer-result"><div className="grid grid-cols-2 gap-2 text-center mb-3"><div className="rounded-xl bg-navy-800 text-white p-3"><p className="text-[10px] uppercase opacity-80">Loyer vide / mois</p><p className="text-xl font-extrabold">{eur(L.vide)}</p><p className="text-[10px]">fourchette {eur(L.bas)} – {eur(L.haut)}</p></div><div className="glass rounded-xl p-3"><p className="text-[10px] uppercase opacity-70">Loyer meublé / mois</p><p className="text-xl font-extrabold">{eur(L.meuble)}</p><p className="text-[10px]">hypothèse +{Math.round(EstimoDVF.MEUBLE_PRIME*100)} %</p></div></div>
+<p className="text-sm">Rendement brut : <b>{pct(L.rendementVide)}</b> vide · <b>{pct(L.rendementMeuble)}</b> meublé {L.prixVente?`(sur ${eur(L.prixVente)}, ${L.baseVente})`:'(prix de vente inconnu)'}</p>
+<p className="text-sm mt-1">{L.commune} : {L.m2.toLocaleString('fr-FR')} €/m² ({L.indicateur}){L.typpred!=='commune'?' — indicateur de maille (peu d’annonces)':` — ${L.nbobs} annonces`}</p>
+<p className={`text-sm mt-1 ${L.encadrement?'text-amber-600 font-semibold':''}`}>{L.encadrement?'⚠️ Commune soumise à l’encadrement des loyers : le loyer doit respecter le plafond de référence majoré.':'Encadrement des loyers : non applicable. '+L.encadrementNote}</p>
+<p className="text-xs opacity-70 mt-2">Source : {L.source}, {L.annee} — {L.reference}.</p></div>}</Card>)}
+
+function DvfPanel({d,setDvf}){const [st,setSt]=useState({busy:false,err:'',msg:''});const [widen,setWiden]=useState(false);const type=dvfType(d.client.type),S=surfRef(d);const v=d.dvf;
+const run=async()=>{if(!type)return setSt({err:'Le comparatif DVF couvre les appartements et les maisons.'});if(!d.client.adresse)return setSt({err:'Renseignez l’adresse du bien dans l’onglet Client.'});
+setSt({busy:true,msg:'Géocodage de l’adresse…'});try{const g=(await EstimoDVF.geocode(d.client.adresse,{limit:1}))[0];if(!g)throw new Error('Adresse introuvable');setSt({busy:true,msg:'Analyse des ventes DVF…'});
+const r=await EstimoDVF.priceNear({lat:g.lat,lon:g.lon,citycode:g.citycode,type,surface:S||0,radius:300,autoWiden:widen});
+setDvf({type,citycode:g.citycode,adresse:g.label,lat:g.lat,lon:g.lon,n:r.n,median:r.median,q1:r.q1,q3:r.q3,removed:r.removed,radius:r.radius,surfaceTol:r.surfaceTol,since:r.since,source:r.source,fallback:!!r.fallback,fallbackReason:r.fallbackReason||'',at:Date.now(),
+ comps:r.kept.sort((a,b)=>a.distance-b.distance).slice(0,40).map(c=>({date:c.date,prix:c.prix,surface:c.surface,prixM2:Math.round(c.prixM2),distance:c.distance}))});setSt({})}catch(e){setSt({err:'Comparatif impossible : '+e.message+(navigator.onLine?'':' (hors ligne)')})}};
+return(<Card title="Comparatif DVF (300 m)"><p className="text-xs opacity-75 mb-3">Ventes {type?type+'s':'—'} des 3 dernières années autour de l’adresse, surface ±35 %{S?` (réf. ${S} m²)`:''}, valeurs aberrantes exclues (IQR). Source : DVF Etalab, décembre 2025 ; API Cerema en secours.</p>
+<label className="flex items-center gap-2 text-sm mb-3"><input type="checkbox" checked={widen} onChange={e=>setWiden(e.target.checked)}/> Élargir le rayon si moins de 8 ventes</label>
+<Btn primary on={run} cls="w-full">{st.busy?st.msg:'Lancer le comparatif DVF'}</Btn>{st.err&&<p className="text-sm text-red-600 mt-2">{st.err}</p>}
+{v&&<div className="mt-4" data-testid="dvf-result"><p className="text-xs opacity-70">{v.adresse}</p><div className="grid grid-cols-3 gap-2 my-3 text-center"><div className="rounded-xl bg-navy-800 text-white p-2"><p className="text-[10px] uppercase opacity-80">Médiane</p><p className="font-extrabold">{v.median?eur(v.median):'—'}</p><p className="text-[10px]">/m²</p></div><div className="glass rounded-xl p-2"><p className="text-[10px] uppercase opacity-70">Ventes</p><p className="font-extrabold">{v.n}</p><p className="text-[10px]">{v.radius} m</p></div><div className="glass rounded-xl p-2"><p className="text-[10px] uppercase opacity-70">Q1 – Q3</p><p className="font-bold text-xs leading-5">{v.q1?`${v.q1.toLocaleString('fr-FR')}–${v.q3.toLocaleString('fr-FR')}`:'—'}</p><p className="text-[10px]">€/m²</p></div></div>
+{S&&v.median?<p className="text-sm mb-2">Valeur indicative : <b>{eur(v.median*S)}</b> ({S} m² × médiane)</p>:null}
+<p className="text-xs opacity-70 mb-2">Données : {v.source}{v.fallback?` — repli Cerema (${v.fallbackReason})`:''} · depuis le {v.since.split('-').reverse().join('/')}{v.removed?` · ${v.removed} valeur(s) aberrante(s) exclue(s)`:''}</p>
+{v.n===0&&<p className="text-sm text-amber-600">Aucune vente comparable dans ce rayon : cochez « Élargir le rayon ».</p>}
+{v.n>v.comps.length&&<p className="text-xs opacity-70 mb-1">{v.comps.length} ventes les plus proches affichées sur {v.n} retenues.</p>}<div className="max-h-72 overflow-auto rounded-xl"><table className="w-full text-xs"><thead><tr className="text-left opacity-70"><th className="py-1">Date</th><th>Surface</th><th>Prix</th><th>€/m²</th><th>Dist.</th></tr></thead><tbody>{v.comps.map((c,i)=>(<tr key={i} className="border-t border-navy-100 dark:border-navy-800"><td className="py-1">{c.date.split('-').reverse().join('/')}</td><td>{c.surface} m²</td><td>{c.prix.toLocaleString('fr-FR')}</td><td className="font-semibold">{c.prixM2.toLocaleString('fr-FR')}</td><td>{c.distance} m</td></tr>))}</tbody></table></div></div>}</Card>)}
+
+function Tools({d,setDvf,setLoyer}){const [msg,setMsg]=useState('');const txt=fiche(d);
+const copy=async()=>{try{await navigator.clipboard.writeText(txt);setMsg('Fiche copiée dans le presse-papier ✓')}catch(e){const t=document.createElement('textarea');t.value=txt;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();setMsg('Fiche copiée ✓')}};
+const share=async()=>{if(navigator.share){try{await navigator.share({title:'Fiche d’estimation Estimo',text:txt})}catch(e){}}else{copy();setMsg('Partage indisponible sur ce navigateur : fiche copiée.')}};
+const vcf=()=>{const name=([d.client.prenom,d.client.nom].filter(Boolean).join('-')||'client').replace(/[^\p{L}\p{N}-]+/gu,'_');download(name+'.vcf',vcard(d.client),'text/vcard;charset=utf-8');setMsg('VCard générée ✓')};
+return(<><DvfPanel d={d} setDvf={setDvf}/><LoyerPanel d={d} setLoyer={setLoyer}/><Card title="Fiche d’estimation"><pre className="whitespace-pre-wrap text-xs bg-white/60 dark:bg-navy-950/60 rounded-xl p-3 max-h-80 overflow-auto" data-testid="fiche">{txt}</pre><div className="flex flex-wrap gap-2 mt-3"><Btn primary on={share}>Partager</Btn><Btn on={copy}>Copier</Btn><Btn on={vcf}>Export VCard (.vcf)</Btn></div>{msg&&<p className="text-sm mt-2 text-emerald-600">{msg}</p>}</Card></>)}
+
+function Editor({d,update,back}){const [tab,setTab]=useState(0);const [drag,setDrag]=useState(0);const sx=useRef(null);const scroller=useRef(null);
+const set=(sec,k)=>(v)=>update(x=>({...x,[sec]:{...x[sec],[k]:v}}));
+const c=d.client,b=d.bien,t=d.technique,f=d.financier,S=surfRef(d),P=n(f.prixAttendu);
+const go=(i)=>{setTab(Math.max(0,Math.min(4,i)));window.scrollTo({top:0,behavior:'smooth'})};
+const ts=(e)=>{const tg=e.target.closest('input,select,textarea,table,pre');if(tg)return;sx.current={x:e.touches[0].clientX,y:e.touches[0].clientY,lock:null}};
+const tm=(e)=>{const s=sx.current;if(!s)return;const dx=e.touches[0].clientX-s.x,dy=e.touches[0].clientY-s.y;if(s.lock==null&&(Math.abs(dx)>8||Math.abs(dy)>8))s.lock=Math.abs(dx)>Math.abs(dy);if(s.lock)setDrag(dx)};
+const te=()=>{const s=sx.current;sx.current=null;if(s&&s.lock){if(drag<-60)go(tab+1);else if(drag>60)go(tab-1)}setDrag(0)};
+const fileRef=useRef(),camRef=useRef();const [busy,setBusy]=useState(false);
+const addPhotos=async(files)=>{setBusy(true);const out=[];for(const fl of files){try{const r=await compress(fl);out.push({id:uid(),...r,name:fl.name,at:Date.now()})}catch(e){}}update(x=>({...x,medias:[...x.medias,...out]}));setBusy(false)};
+const panes=[
+<div key="c"><Card title="Type de bien"><div className="flex flex-wrap">{TYPES.map(x=><Chk key={x} v={c.type===x} on={()=>set('client','type')(x)} label={x}/>)}</div></Card>
+<Card title="Vendeur"><G2><Field label="Nom"><Txt v={c.nom} on={set('client','nom')} ph="Dupont"/></Field><Field label="Prénom"><Txt v={c.prenom} on={set('client','prenom')} ph="Marie"/></Field></G2><Field label="Téléphone"><Txt type="tel" mode="tel" v={c.tel} on={set('client','tel')} ph="06 12 34 56 78"/></Field><Field label="Email"><Txt type="email" mode="email" v={c.email} on={set('client','email')} ph="marie.dupont@exemple.fr"/></Field><Field label="Adresse du bien" hint="Utilisée pour le comparatif DVF à 300 m."><Txt v={c.adresse} on={set('client','adresse')} ph="12 boulevard Sadi Carnot, 06110 Le Cannet"/></Field></Card></div>,
+<div key="b"><Card title="Surfaces"><G2><Field label="Loi Carrez"><Num v={b.carrez} on={set('bien','carrez')} unit="m²"/></Field><Field label="Habitable"><Num v={b.habitable} on={set('bien','habitable')} unit="m²"/></Field><Field label="Terrain"><Num v={b.terrain} on={set('bien','terrain')} unit="m²"/></Field><Field label="Jardin"><Num v={b.jardin} on={set('bien','jardin')} unit="m²"/></Field><Field label="Balcon"><Num v={b.balcon} on={set('bien','balcon')} unit="m²"/></Field><Field label="Terrasse"><Num v={b.terrasse} on={set('bien','terrasse')} unit="m²"/></Field><Field label="Cave / annexes"><Num v={b.cave} on={set('bien','cave')} unit="m²"/></Field></G2></Card>
+<Card title="Distribution"><G2><Field label="Pièces"><Num v={b.pieces} on={set('bien','pieces')}/></Field><Field label="Chambres"><Num v={b.chambres} on={set('bien','chambres')}/></Field><Field label="Salles d’eau / bains"><Num v={b.sdb} on={set('bien','sdb')}/></Field><Field label="Hauteur sous plafond"><Num v={b.hsp} on={set('bien','hsp')} unit="m"/></Field><Field label="Étage"><Num v={b.etage} on={set('bien','etage')}/></Field></G2><Chk v={b.ascenseur} on={set('bien','ascenseur')} label="Ascenseur"/></Card>
+<Card title="Environnement"><G2><Field label="Exposition"><Sel v={b.exposition} on={set('bien','exposition')} opts={['Nord','Nord-Est','Est','Sud-Est','Sud','Sud-Ouest','Ouest','Nord-Ouest','Traversant']}/></Field><Field label="Vis-à-vis"><Sel v={b.visavis} on={set('bien','visavis')} opts={['Aucun','Lointain','Modéré','Proche']}/></Field><Field label="Bruit"><Sel v={b.bruit} on={set('bien','bruit')} opts={['Calme','Modéré','Bruyant']}/></Field><Field label="Vue"><Sel v={b.vue} on={set('bien','vue')} opts={['Mer','Montagne','Dégagée','Jardin / verdure','Rue','Cour']}/></Field></G2></Card></div>,
+<div key="t"><Card title="Énergie et isolation"><G2><Field label="Chauffage"><Sel v={t.chauffage} on={set('technique','chauffage')} opts={['Individuel','Collectif','Pompe à chaleur','Poêle / insert','Aucun']}/></Field><Field label="Énergie"><Sel v={t.energie} on={set('technique','energie')} opts={['Électrique','Gaz','Fioul','Bois / granulés','Réseau urbain','Solaire']}/></Field><Field label="Isolation"><Sel v={t.isolation} on={set('technique','isolation')} opts={['Bonne','Moyenne','Faible','Inconnue']}/></Field><Field label="Menuiseries"><Sel v={t.menuiseries} on={set('technique','menuiseries')} opts={['Simple vitrage','Double vitrage','Triple vitrage','Mixte']}/></Field><Field label="DPE"><Sel v={t.dpe} on={set('technique','dpe')} opts={['A','B','C','D','E','F','G','Non réalisé']}/></Field><Field label="Année de construction"><Num v={t.annee} on={set('technique','annee')}/></Field></G2></Card>
+<Card title="Équipements de confort"><Chk v={t.cuisine} on={set('technique','cuisine')} label="Cuisine équipée"/><Chk v={t.borneVE} on={set('technique','borneVE')} label="Borne de recharge VE"/><Chk v={t.climatisation} on={set('technique','climatisation')} label="Climatisation"/><Chk v={t.piscine} on={set('technique','piscine')} label="Piscine"/><Field label="Stationnement"><Sel v={t.parking} on={set('technique','parking')} opts={['Aucun','Place extérieure','Parking couvert','Box fermé','Garage','Plusieurs places']}/></Field><Field label="Travaux réalisés"><textarea className="inp" rows="3" value={t.travaux} onChange={e=>set('technique','travaux')(e.target.value)} placeholder="Ex. : cuisine refaite en 2022, ravalement 2020…"/></Field></Card>
+<Card title="Points d’attention"><Chk v={t.toiture} on={set('technique','toiture')} label="⚠️ Toiture"/><Chk v={t.fissures} on={set('technique','fissures')} label="⚠️ Fissures"/><Chk v={t.humidite} on={set('technique','humidite')} label="⚠️ Humidité"/><Chk v={t.amiante} on={set('technique','amiante')} label="⚠️ Amiante / plomb"/><Field label="Remarques sur l’état"><textarea className="inp" rows="2" value={t.notesEtat} onChange={e=>set('technique','notesEtat')(e.target.value)}/></Field></Card></div>,
+<div key="f"><Card title="Charges et fiscalité"><G2><Field label="Taxe foncière"><Num v={f.taxeFonciere} on={set('financier','taxeFonciere')} unit="€/an"/></Field><Field label="Charges copro."><Num v={f.charges} on={set('financier','charges')} unit="€/an"/></Field></G2></Card>
+<Card title="Projet de vente"><Field label="Motivation de vente"><Sel v={f.motivation} on={set('financier','motivation')} opts={['Mutation professionnelle','Agrandissement','Réduction de surface','Succession','Divorce / séparation','Investissement','Départ à la retraite','Autre']}/></Field><Field label="Délai souhaité"><Sel v={f.delai} on={set('financier','delai')} opts={['Immédiat','Moins de 3 mois','3 à 6 mois','6 à 12 mois','Pas pressé']}/></Field><Field label="Prix attendu par le vendeur"><Num v={f.prixAttendu} on={set('financier','prixAttendu')} unit="€"/></Field>
+<div className="rounded-2xl bg-navy-800 text-white p-4 text-center" data-testid="prixm2"><p className="text-xs uppercase opacity-80">Prix au m² (automatique)</p><p className="text-3xl font-extrabold">{P&&S?eur(P/S):'—'}</p><p className="text-xs opacity-70">{S?`sur ${S} m² ${n(b.carrez)?'Carrez':'habitables'}`:'Renseignez une surface dans l’onglet Bien'}</p>{d.dvf&&d.dvf.median&&P&&S?<p className="text-xs mt-2">Médiane DVF : {eur(d.dvf.median)}/m² · écart {((P/S/d.dvf.median-1)*100).toFixed(1).replace('.',',')} %</p>:null}</div>
+<Field label="Notes"><textarea className="inp mt-3" rows="2" value={f.notes} onChange={e=>set('financier','notes')(e.target.value)}/></Field></Card>
+<Tools d={d} setDvf={(v)=>update(x=>({...x,dvf:v}))} setLoyer={(v)=>update(x=>({...x,loyer:v}))}/></div>,
+<div key="m"><Card title="Photos du bien"><p className="text-xs opacity-75 mb-3">Compression automatique à 800 px de large (JPEG).</p><div className="flex gap-2 mb-3"><Btn primary on={()=>camRef.current.click()} cls="flex-1">📷 Prendre une photo</Btn><Btn on={()=>fileRef.current.click()} cls="flex-1">🖼 Galerie</Btn></div>
+<input ref={camRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e=>{addPhotos([...e.target.files]);e.target.value=''}}/><input ref={fileRef} data-testid="gallery" type="file" accept="image/*" multiple className="hidden" onChange={e=>{addPhotos([...e.target.files]);e.target.value=''}}/>
+{busy&&<p className="text-sm">Compression…</p>}{d.medias.length===0&&<p className="text-sm opacity-70">Aucune photo.</p>}
+<div className="grid grid-cols-2 sm:grid-cols-3 gap-2">{d.medias.map(m=>(<div key={m.id} className="relative"><img src={m.data} className="rounded-xl w-full aspect-[4/3] object-cover"/><span className="absolute bottom-1 left-1 text-[10px] bg-black/50 text-white rounded px-1">{m.w}×{m.h}</span><button onClick={()=>update(x=>({...x,medias:x.medias.filter(y=>y.id!==m.id)}))} className="absolute top-1 right-1 glass rounded-full w-7 h-7 text-xs">✕</button></div>))}</div></Card></div>];
+return(<div className="min-h-screen pb-28"><header className="sticky top-0 z-20 glass !rounded-none px-3 pb-2" style={{paddingTop:'max(env(safe-area-inset-top),.6rem)'}}><div className="max-w-3xl mx-auto"><div className="flex items-center gap-2 mb-2"><button onClick={back} className="glass glass-btn rounded-full w-10 h-10" aria-label="Accueil">‹</button><Logo size={30}/><div className="flex-1 min-w-0"><p className="font-bold truncate">{[c.prenom,c.nom].filter(Boolean).join(' ')||'Nouveau dossier'}</p><p className="text-xs opacity-70 truncate">{c.type}{S?` · ${S} m²`:''} · enregistré automatiquement</p></div></div>
+<nav className="flex gap-1 overflow-x-auto">{TABS.map(([k,l],i)=>(<button key={k} onClick={()=>go(i)} className={`glass-btn flex-1 rounded-xl px-2 py-2 text-sm font-semibold whitespace-nowrap ${tab===i?'bg-navy-800 text-white shadow':'glass'}`}>{l}</button>))}</nav></div></header>
+<div className="overflow-hidden" style={{touchAction:"pan-y"}} onTouchStart={ts} onTouchMove={tm} onTouchEnd={te}><div className="track" style={{transform:`translateX(calc(${-tab*100}% + ${drag}px))`,transition:drag?'none':undefined}}>{panes.map((p,i)=>(<div key={i} className="pane px-4 pt-4" style={i===tab?{}:{height:0,overflow:'hidden'}}><div className="max-w-3xl mx-auto">{p}</div></div>))}</div></div>
+<div className="fixed bottom-0 inset-x-0 p-3 z-20" style={{paddingBottom:'max(env(safe-area-inset-bottom),.75rem)'}}><div className="max-w-3xl mx-auto flex gap-2"><Btn on={()=>go(tab-1)} cls={`flex-1 ${tab===0?'opacity-40':''}`}>‹ Précédent</Btn><Btn primary on={()=>tab===4?back():go(tab+1)} cls="flex-1">{tab===4?'Terminer ✓':'Suivant ›'}</Btn></div><p className="text-center text-[10px] opacity-50 mt-1">Glissez à gauche / à droite pour changer d’onglet</p></div></div>)}
+
+function App(){const [list,setList]=useState(load);const [cur,setCur]=useState(null);const [dark,setDark]=useState(()=>localStorage.getItem(THEME)?localStorage.getItem(THEME)==='dark':matchMedia('(prefers-color-scheme: dark)').matches);
+useEffect(()=>{document.documentElement.classList.toggle('dark',dark);localStorage.setItem(THEME,dark?'dark':'light');document.querySelector('meta[name=theme-color]').content=dark?'#061226':'#0b1f3a'},[dark]);
+useEffect(()=>{const h=()=>{const id=decodeURIComponent(location.hash.replace(/^#\/?d\//,''));setCur(location.hash.startsWith('#/d/')?id:null)};h();addEventListener('hashchange',h);return()=>removeEventListener('hashchange',h)},[]);
+const commit=(l)=>{if(save(l))setList(l)};const open=(id)=>{location.hash='#/d/'+id};const back=()=>{location.hash=''};
+const create=()=>{const d=blank();commit([...list,d]);open(d.id)};
+const d=list.find(x=>x.id===cur);const update=(fn)=>setList(l=>{const nl=l.map(x=>x.id===cur?{...fn(x),updated:Date.now()}:x);save(nl);return nl});
+return d?<Editor key={d.id} d={d} update={update} back={back}/>:<Home list={list} open={open} create={create} del={(id)=>commit(list.filter(x=>x.id!==id))} dark={dark} setDark={setDark}/>}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);document.getElementById('boot').remove();
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+</script>
 </body>
 </html>

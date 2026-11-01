@@ -1,55 +1,26 @@
 {
   "id": "./",
-  "name": "Estimo",
+  "name": "Estimo — Estimation immobilière sur site",
   "short_name": "Estimo",
-  "description": "Estimation immobilière : prix/m² médian des ventes DVF autour de l'adresse, ajusté selon le bien, fourchette et comparables.",
+  "description": "Dossiers d'estimation sur site, comparatif DVF à 300 m, fiche d'estimation, export VCard. Sans publicité, fonctionne hors ligne.",
   "lang": "fr",
   "dir": "ltr",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
-  "theme_color": "#1f5f5b",
-  "background_color": "#f6f5f2",
-  "categories": [
-    "business",
-    "productivity",
-    "utilities"
-  ],
+  "theme_color": "#0b1f3a",
+  "background_color": "#0b1f3a",
+  "categories": ["business", "productivity", "utilities"],
   "icons": [
-    {
-      "src": "icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/maskable-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+    {"src": "icons/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}
   ],
   "screenshots": [
-    {
-      "src": "screenshots/mobile.png",
-      "sizes": "1080x1920",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Prix de référence DVF autour du bien"
-    },
-    {
-      "src": "screenshots/desktop.png",
-      "sizes": "1920x1080",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "Formulaire et résultat avec fourchette"
-    }
+    {"src": "screenshots/mobile.png", "sizes": "390x844", "type": "image/png", "form_factor": "narrow", "label": "Accueil et dossiers"},
+    {"src": "screenshots/desktop.png", "sizes": "1280x800", "type": "image/png", "form_factor": "wide", "label": "Comparatif DVF et fiche d'estimation"}
   ]
 }
