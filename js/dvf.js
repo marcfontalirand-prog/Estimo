@@ -3,7 +3,9 @@
 // Logique pure (filtres, médiane, IQR) testable sous Node ; fonctions réseau isolées.
 export const GEOCODE_URL = 'https://api-adresse.data.gouv.fr/search/';
 export const LOCAL_BASE = new URL('../data/dvf/', import.meta.url).href;
-export const SOURCE_LABEL = 'DVF Etalab, décembre 2025';
+export const SOURCE_LABEL = 'DVF Etalab (geo-dvf)';
+// Date de la vente la plus récente publiée dans data/dvf/ — réécrite par tools/build-dvf.py.
+export const DATA_CUTOFF = '2025-12-31';
 export const FALLBACK_LABEL = 'DVF (Cerema / DGFiP), source de secours';
 export const DVF_URL = 'https://apidf-preprod.cerema.fr/dvf_opendata/geomutations/';
 // codtypbien Cerema : 111 = une maison, 121 = un appartement (mutation d'un seul logement).

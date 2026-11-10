@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { median, quantile, iqrFilter, stats, selectComparables, analyse, distance, bboxTiles, centroid, normalize, MAX_TILE, priceNear, priceNearCerema } from '../js/dvf.js';
+import { median, quantile, iqrFilter, stats, selectComparables, analyse, distance, bboxTiles, centroid, normalize, MAX_TILE, priceNear, priceNearCerema, DATA_CUTOFF } from '../js/dvf.js';
 
 test('médiane et quantiles', () => {
   assert.equal(median([3, 1, 2]), 2);
@@ -83,7 +83,9 @@ test('Etalab indisponible : repli sur l’API Cerema', async () => {
 });
 test('Données précalculées 06 : index cohérent et Le Cannet présent', () => {
   const index = JSON.parse(readFileSync(new URL('../data/dvf/06/index.json', import.meta.url)));
-  assert.equal(index.source, 'DVF Etalab, décembre 2025'); assert.ok(index.communes['06030'].n > 1000);
+  assert.match(index.source, /DVF Etalab/); assert.ok(index.communes['06030'].n > 1000);
+  // La date affichée par l'application doit correspondre aux données présentes dans le dépôt.
+  assert.equal(index.derniere_vente, DATA_CUTOFF);
   const c = JSON.parse(readFileSync(new URL('../data/dvf/06/06030.json', import.meta.url)));
   assert.equal(c.rows.length, index.communes['06030'].n); assert.ok(c.rows.at(-1)[0].startsWith('2025-12'));
 });

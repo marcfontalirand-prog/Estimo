@@ -55,6 +55,17 @@ const blank=()=>({id:uid(),created:Date.now(),updated:Date.now(),
  medias:[],dvf:null,loyer:null});
 const load=()=>{try{return JSON.parse(localStorage.getItem(STORE))||[]}catch(e){return[]}};
 const save=(l)=>{try{localStorage.setItem(STORE,JSON.stringify(l));return true}catch(e){alert('Stockage plein : supprimez des photos ou des dossiers.');return false}};
+const backupName=()=>'estimo-dossiers-'+new Date().toISOString().slice(0,10)+'.json';
+// Sauvegarde de tous les dossiers (photos comprises) dans un fichier JSON téléchargé.
+const backup=(list)=>{const payload={app:'Estimo',format:'estimo.v2.backup',exportedAt:new Date().toISOString(),nb:list.length,dossiers:list};
+ const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=backupName();document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000)};
+const readBackup=async(file)=>{const o=JSON.parse(await file.text());const arr=Array.isArray(o)?o:(o&&Array.isArray(o.dossiers)?o.dossiers:null);
+ if(!arr)throw new Error('fichier non reconnu (sauvegarde Estimo attendue)');
+ const ok=arr.filter(d=>d&&d.id&&d.client&&d.bien);if(!ok.length)throw new Error('aucun dossier valide dans le fichier');return ok};
+// Fusion sans écrasement : un dossier existant n'est remplacé que par une version plus récente.
+const mergeDossiers=(cur,inc)=>{const m=new Map(cur.map(d=>[d.id,d]));let added=0,upd=0;for(const d of inc){const e=m.get(d.id);
+ if(!e){m.set(d.id,d);added++}else if((+d.updated||0)>(+e.updated||0)){m.set(d.id,d);upd++}}
+ return{list:[...m.values()].sort((a,b)=>(b.updated||0)-(a.updated||0)),added,upd}};
 const surfRef=(d)=>n(d.bien.carrez)||n(d.bien.habitable);
 const dvfType=(t)=>t==='Appartement'?'appartement':t==='Maison'?'maison':null;
 
@@ -78,7 +89,7 @@ L.push('BIEN');add('Surface Carrez',b.carrez&&b.carrez+' m²');add('Surface habi
 L.push('TECHNIQUE');add('Chauffage',[t.chauffage,t.energie].filter(Boolean).join(' — '));add('Isolation',t.isolation);add('Menuiseries',t.menuiseries);add('DPE',t.dpe);add('Année de construction',t.annee);add('Cuisine équipée',t.cuisine);add('Stationnement',t.parking);add('Borne de recharge VE',t.borneVE);add('Climatisation',t.climatisation);add('Piscine',t.piscine);add('Travaux réalisés',t.travaux);
 const w=[t.toiture&&'toiture',t.fissures&&'fissures',t.humidite&&'humidité',t.amiante&&'amiante / plomb à diagnostiquer'].filter(Boolean);add('Points d\u2019attention',w.join(', '));add('Remarques état',t.notesEtat);L.push('');
 L.push('FINANCIER');add('Taxe foncière',f.taxeFonciere&&eur(n(f.taxeFonciere))+' / an');add('Charges de copropriété',f.charges&&eur(n(f.charges))+' / an');add('Motivation de vente',f.motivation);add('Délai souhaité',f.delai);add('Prix attendu',P&&eur(P));if(P&&S)add('Prix attendu au m²',eur(P/S)+' /m²');L.push('');
-if(d.dvf&&d.dvf.median){const v=d.dvf;L.push('MARCHÉ (DVF)');add('Source',v.source+(v.fallback?' (secours)':''));add('Comparables',`${v.n} ventes ${v.type}s dans un rayon de ${v.radius} m depuis le ${v.since.split('-').reverse().join('/')}`);add('Prix médian',eur(v.median)+' /m²');add('Fourchette interquartile',`${eur(v.q1)} – ${eur(v.q3)} /m²`);if(S){add('Valeur indicative (médiane × surface)',eur(v.median*S));}if(P&&S)add('Écart prix attendu / médiane DVF',((P/S/v.median-1)*100).toFixed(1).replace('.',',')+' %');L.push('');}
+if(d.dvf&&d.dvf.median){const v=d.dvf;L.push('MARCHÉ (DVF)');add('Source',v.source+(v.fallback?' (secours)':''));add('Comparables',`${v.n} ventes ${v.type}s dans un rayon de ${v.radius} m du ${v.since.split('-').reverse().join('/')} au ${v.lastSale?fmtDate(v.lastSale):'—'}`);add('Prix médian',eur(v.median)+' /m²');add('Fourchette interquartile',`${eur(v.q1)} – ${eur(v.q3)} /m²`);if(S){add('Valeur indicative (médiane × surface)',eur(v.median*S));}if(P&&S)add('Écart prix attendu / médiane DVF',((P/S/v.median-1)*100).toFixed(1).replace('.',',')+' %');L.push('');}
 if(d.loyer){const l=d.loyer;L.push('LOCATIF');add('Loyer estimé vide',eur(l.vide)+' / mois charges comprises (fourchette '+eur(l.bas)+' – '+eur(l.haut)+')');if(l.meuble)add('Loyer estimé meublé',eur(l.meuble)+' / mois (hypothèse +15 %)');add('Rendement brut',pct(l.rendementVide)+' vide'+(l.meuble?' · '+pct(l.rendementMeuble)+' meublé':'')+(l.prixVente?' sur '+eur(l.prixVente):''));add('Référence',`${l.m2.toLocaleString('fr-FR')} €/m² — ${l.indicateur}, ${l.commune}`);add('Encadrement des loyers',l.encadrement?'oui, commune soumise à l’encadrement':'non applicable');add('Source',`${l.source}, ${l.annee}`);L.push('');}
 if(d.medias.length)L.push(`Photos jointes au dossier : ${d.medias.length}`);L.push('Estimation indicative, non contractuelle.');return L.join('\n')}
 
@@ -108,16 +119,24 @@ return(<div data-testid="sharebar"><div className={`flex gap-1.5 ${compact?'':'g
 <B on={()=>shareFiche(d,say)} icon="📄" label="Fiche" cls="bg-navy-800 text-white"/><B on={()=>shareContact(d,say)} icon="👤" label="Contact" cls="glass"/><B href={waLink(d)} icon="💬" label="WhatsApp" cls="glass !text-emerald-700 dark:!text-emerald-300"/><B href={mailLink(d)} icon="✉️" label="Email" cls="glass"/><B on={async()=>{await copyText(fiche(d));say('Fiche copiée ✓')}} icon="📋" label="Copier" cls="glass"/></div>
 {msg&&<p className="text-xs mt-1 text-emerald-600 text-center">{msg}</p>}</div>)}
 
-function Home({list,open,create,del,dark,setDark}){const nb=list.length;return(<div className="max-w-3xl mx-auto px-4 pb-24" style={{paddingTop:'max(env(safe-area-inset-top),1rem)'}}>
-<header className="flex items-center justify-between mb-6"><div className="flex items-center gap-3"><Logo size={44}/><div><h1 className="text-2xl font-extrabold tracking-tight">Estimo</h1><p className="text-xs opacity-70">Estimation sur site · V2.2</p></div></div><button onClick={()=>setDark(!dark)} className="glass glass-btn rounded-full w-11 h-11 text-lg" aria-label="Mode sombre">{dark?'☀️':'🌙'}</button></header>
-<div className="rounded-3xl p-5 mb-5 bg-gradient-to-br from-navy-800 to-navy-950 text-white shadow-xl"><p className="text-sm opacity-80">Dossiers enregistrés</p><p className="text-5xl font-extrabold my-1" data-testid="count">{nb}</p><p className="text-xs opacity-70">Stockés sur cet appareil (hors ligne)</p><button onClick={create} className="mt-4 w-full rounded-xl py-3 font-bold bg-white/15 backdrop-blur border border-white/30 glass-btn">＋ Nouvelle estimation</button></div>
+function Home({list,open,create,del,dark,setDark,backup,restore}){const nb=list.length;const restoRef=useRef();const [bmsg,setBmsg]=useState('');
+const used=useMemo(()=>Math.round(new Blob([JSON.stringify(list)]).size/1024),[list]);return(<div className="max-w-3xl mx-auto px-4 pb-24" style={{paddingTop:'max(env(safe-area-inset-top),1rem)'}}>
+<header className="flex items-center justify-between mb-6"><div className="flex items-center gap-3"><Logo size={44}/><div><h1 className="text-2xl font-extrabold tracking-tight">Estimo</h1><p className="text-xs opacity-70">Estimation sur site · V2.3</p></div></div><button onClick={()=>setDark(!dark)} className="glass glass-btn rounded-full w-11 h-11 text-lg" aria-label="Mode sombre">{dark?'☀️':'🌙'}</button></header>
+<div className="rounded-3xl p-5 mb-5 bg-gradient-to-br from-navy-800 to-navy-950 text-white shadow-xl"><p className="text-sm opacity-80">Dossiers enregistrés</p><p className="text-5xl font-extrabold my-1" data-testid="count">{nb}</p><p className="text-xs opacity-70">Stockés sur cet appareil (hors ligne)</p><button onClick={create} className="mt-4 w-full rounded-xl py-3 font-bold bg-white/15 backdrop-blur border border-white/30 glass-btn">＋ Nouvelle estimation</button>
+<div className="mt-2 flex gap-2"><button onClick={()=>{backup(list);setBmsg('Sauvegarde téléchargée ✓')}} disabled={!nb} className={`flex-1 rounded-xl py-2 text-sm font-semibold bg-white/10 border border-white/25 glass-btn ${nb?'':'opacity-40'}`}>⬇ Sauvegarder</button>
+<button onClick={()=>restoRef.current.click()} className="flex-1 rounded-xl py-2 text-sm font-semibold bg-white/10 border border-white/25 glass-btn">⬆ Restaurer</button></div>
+<input ref={restoRef} type="file" accept="application/json,.json" className="hidden" onChange={async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
+ if(!confirm('Restaurer « '+f.name+' » ? Les dossiers du fichier sont fusionnés avec ceux de cet appareil ; en cas de doublon, la version la plus récente est conservée.'))return;
+ setBmsg(await restore(f))}}/>
+<p className="text-[11px] opacity-60 mt-2" data-testid="storage">Sauvegarde : {nb} dossier(s) · ~{used} Ko sur cet appareil</p>
+{bmsg&&<p className="text-xs font-semibold text-emerald-300 mt-1" data-testid="backupmsg">{bmsg}</p>}</div>
 <h2 className="font-bold mb-3">Dossiers récents</h2>
 {nb===0&&<p className="glass rounded-2xl p-5 text-sm opacity-80">Aucun dossier pour l’instant. Créez votre première estimation.</p>}
 {[...list].sort((a,b)=>b.updated-a.updated).map(d=>{const S=surfRef(d),P=n(d.financier.prixAttendu);return(<div key={d.id} className="glass rounded-2xl p-4 mb-3"><div className="flex items-center gap-3">
 <button className="flex-1 text-left" onClick={()=>open(d.id)}><p className="font-semibold">{[d.client.prenom,d.client.nom].filter(Boolean).join(' ')||'Client sans nom'} <span className="text-xs font-normal opacity-60">· {d.client.type}</span></p><p className="text-sm opacity-75 truncate">{d.client.adresse||'Adresse non renseignée'}</p><p className="text-xs opacity-60 mt-1">{fmtDate(d.updated)}{S?` · ${S} m²`:''}{P?` · ${eur(P)}`:''}{d.medias.length?` · ${d.medias.length} photo(s)`:''}</p></button>
 <button onClick={()=>open(d.id)} className="glass glass-btn rounded-xl px-3 py-2 text-sm font-semibold">Ouvrir</button>
 <button onClick={()=>{if(confirm('Supprimer définitivement ce dossier ?'))del(d.id)}} className="glass glass-btn rounded-xl px-3 py-2 text-sm text-red-600" aria-label="Supprimer">🗑</button></div><div className="mt-3"><p className="text-[10px] uppercase font-semibold opacity-60 mb-1">Partager</p><ShareBar d={d} compact/></div></div>)})}
-<p className="text-center text-xs opacity-50 mt-8">Sans publicité · Données DVF Etalab, décembre 2025</p></div>)}
+<p className="text-center text-xs opacity-50 mt-8">Sans publicité · DVF Etalab · ventes jusqu’au {fmtDate(EstimoDVF.DATA_CUTOFF)}</p></div>)}
 
 
 
@@ -139,14 +158,14 @@ function DvfPanel({d,setDvf}){const [st,setSt]=useState({busy:false,err:'',msg:'
 const run=async()=>{if(!type)return setSt({err:'Le comparatif DVF couvre les appartements et les maisons.'});if(!d.client.adresse)return setSt({err:'Renseignez l’adresse du bien dans l’onglet Client.'});
 setSt({busy:true,msg:'Géocodage de l’adresse…'});try{const g=(await EstimoDVF.geocode(d.client.adresse,{limit:1}))[0];if(!g)throw new Error('Adresse introuvable');setSt({busy:true,msg:'Analyse des ventes DVF…'});
 const r=await EstimoDVF.priceNear({lat:g.lat,lon:g.lon,citycode:g.citycode,type,surface:S||0,radius:300,autoWiden:widen});
-setDvf({type,citycode:g.citycode,adresse:g.label,lat:g.lat,lon:g.lon,n:r.n,median:r.median,q1:r.q1,q3:r.q3,removed:r.removed,radius:r.radius,surfaceTol:r.surfaceTol,since:r.since,source:r.source,fallback:!!r.fallback,fallbackReason:r.fallbackReason||'',at:Date.now(),
+setDvf({type,citycode:g.citycode,adresse:g.label,lat:g.lat,lon:g.lon,n:r.n,median:r.median,q1:r.q1,q3:r.q3,removed:r.removed,radius:r.radius,surfaceTol:r.surfaceTol,since:r.since,source:r.source,fallback:!!r.fallback,fallbackReason:r.fallbackReason||'',lastSale:r.lastSale||'',at:Date.now(),
  comps:r.kept.sort((a,b)=>a.distance-b.distance).slice(0,40).map(c=>({date:c.date,prix:c.prix,surface:c.surface,prixM2:Math.round(c.prixM2),distance:c.distance}))});setSt({})}catch(e){setSt({err:'Comparatif impossible : '+e.message+(navigator.onLine?'':' (hors ligne)')})}};
-return(<Card title="Comparatif DVF (300 m)"><p className="text-xs opacity-75 mb-3">Ventes {type?type+'s':'—'} des 3 dernières années autour de l’adresse, surface ±35 %{S?` (réf. ${S} m²)`:''}, valeurs aberrantes exclues (IQR). Source : DVF Etalab, décembre 2025 ; API Cerema en secours.</p>
+return(<Card title="Comparatif DVF (300 m)"><p className="text-xs opacity-75 mb-3">Ventes {type?type+'s':'—'} des 3 dernières années autour de l’adresse, surface ±35 %{S?` (réf. ${S} m²)`:''}, valeurs aberrantes exclues (IQR). Source : {EstimoDVF.SOURCE_LABEL}, ventes jusqu’au {fmtDate(EstimoDVF.DATA_CUTOFF)} ; API Cerema en secours.</p>
 <label className="flex items-center gap-2 text-sm mb-3"><input type="checkbox" checked={widen} onChange={e=>setWiden(e.target.checked)}/> Élargir le rayon si moins de 8 ventes</label>
 <Btn primary on={run} cls="w-full">{st.busy?st.msg:'Lancer le comparatif DVF'}</Btn>{st.err&&<p className="text-sm text-red-600 mt-2">{st.err}</p>}
 {v&&<div className="mt-4" data-testid="dvf-result"><p className="text-xs opacity-70">{v.adresse}</p><div className="grid grid-cols-3 gap-2 my-3 text-center"><div className="rounded-xl bg-navy-800 text-white p-2"><p className="text-[10px] uppercase opacity-80">Médiane</p><p className="font-extrabold">{v.median?eur(v.median):'—'}</p><p className="text-[10px]">/m²</p></div><div className="glass rounded-xl p-2"><p className="text-[10px] uppercase opacity-70">Ventes</p><p className="font-extrabold">{v.n}</p><p className="text-[10px]">{v.radius} m</p></div><div className="glass rounded-xl p-2"><p className="text-[10px] uppercase opacity-70">Q1 – Q3</p><p className="font-bold text-xs leading-5">{v.q1?`${v.q1.toLocaleString('fr-FR')}–${v.q3.toLocaleString('fr-FR')}`:'—'}</p><p className="text-[10px]">€/m²</p></div></div>
 {S&&v.median?<p className="text-sm mb-2">Valeur indicative : <b>{eur(v.median*S)}</b> ({S} m² × médiane)</p>:null}
-<p className="text-xs opacity-70 mb-2">Données : {v.source}{v.fallback?` — repli Cerema (${v.fallbackReason})`:''} · depuis le {v.since.split('-').reverse().join('/')}{v.removed?` · ${v.removed} valeur(s) aberrante(s) exclue(s)`:''}</p>
+<p className="text-xs opacity-70 mb-2">Données : {v.source}{v.fallback?` — repli Cerema (${v.fallbackReason})`:''} · ventes du {v.since.split('-').reverse().join('/')} au {fmtDate(v.lastSale)}{v.removed?` · ${v.removed} valeur(s) aberrante(s) exclue(s)`:''}</p>
 {v.n===0&&<p className="text-sm text-amber-600">Aucune vente comparable dans ce rayon : cochez « Élargir le rayon ».</p>}
 {v.n>v.comps.length&&<p className="text-xs opacity-70 mb-1">{v.comps.length} ventes les plus proches affichées sur {v.n} retenues.</p>}<div className="max-h-72 overflow-auto rounded-xl"><table className="w-full text-xs"><thead><tr className="text-left opacity-70"><th className="py-1">Date</th><th>Surface</th><th>Prix</th><th>€/m²</th><th>Dist.</th></tr></thead><tbody>{v.comps.map((c,i)=>(<tr key={i} className="border-t border-navy-100 dark:border-navy-800"><td className="py-1">{c.date.split('-').reverse().join('/')}</td><td>{c.surface} m²</td><td>{c.prix.toLocaleString('fr-FR')}</td><td className="font-semibold">{c.prixM2.toLocaleString('fr-FR')}</td><td>{c.distance} m</td></tr>))}</tbody></table></div></div>}</Card>)}
 
@@ -192,11 +211,27 @@ return(<div className="min-h-screen pb-28"><header className="sticky top-0 z-20 
 function App(){const [list,setList]=useState(load);const [cur,setCur]=useState(null);const [dark,setDark]=useState(()=>localStorage.getItem(THEME)?localStorage.getItem(THEME)==='dark':matchMedia('(prefers-color-scheme: dark)').matches);
 useEffect(()=>{document.documentElement.classList.toggle('dark',dark);localStorage.setItem(THEME,dark?'dark':'light');document.querySelector('meta[name=theme-color]').content=dark?'#061226':'#0b1f3a'},[dark]);
 useEffect(()=>{const h=()=>{const id=decodeURIComponent(location.hash.replace(/^#\/?d\//,''));setCur(location.hash.startsWith('#/d/')?id:null)};h();addEventListener('hashchange',h);return()=>removeEventListener('hashchange',h)},[]);
-const commit=(l)=>{if(save(l))setList(l)};const open=(id)=>{location.hash='#/d/'+id};const back=()=>{location.hash=''};
+const commit=(l)=>{if(save(l)){setList(l);return true}return false};
+const restore=async(file)=>{try{const inc=await readBackup(file);const m=mergeDossiers(list,inc);
+ if(!save(m.list))return 'Stockage plein : restauration impossible.';setList(m.list);
+ return m.added+' dossier(s) ajouté(s), '+m.upd+' mis à jour, '+m.list.length+' au total ✓'}catch(e){return 'Restauration impossible : '+e.message}};
+const open=(id)=>{location.hash='#/d/'+id};const back=()=>{location.hash=''};
 const create=()=>{const d=blank();commit([...list,d]);open(d.id)};
 const d=list.find(x=>x.id===cur);const update=(fn)=>setList(l=>{const nl=l.map(x=>x.id===cur?{...fn(x),updated:Date.now()}:x);save(nl);return nl});
-return d?<Editor key={d.id} d={d} update={update} back={back}/>:<Home list={list} open={open} create={create} del={(id)=>commit(list.filter(x=>x.id!==id))} dark={dark} setDark={setDark}/>}
-ReactDOM.createRoot(document.getElementById('root')).render(<App/>);document.getElementById('boot').remove();
+return d?<Editor key={d.id} d={d} update={update} back={back}/>:<Home list={list} open={open} create={create} del={(id)=>commit(list.filter(x=>x.id!==id))} dark={dark} setDark={setDark} backup={backup} restore={restore}/>}
+// Filet de sécurité : une erreur de rendu ne doit pas laisser un écran blanc devant un client.
+class ErrorBoundary extends React.Component{constructor(p){super(p);this.state={err:null}}
+ static getDerivedStateFromError(err){return{err}}
+ componentDidCatch(err,info){console.error('Estimo',err,info)}
+ render(){if(!this.state.err)return this.props.children;
+  const rescue=()=>{try{backup(load())}catch(e){}};
+  return(<div className="max-w-2xl mx-auto px-5 py-10"><Logo size={52}/>
+   <h1 className="text-xl font-extrabold mt-4 mb-2">L’application a rencontré une erreur</h1>
+   <p className="text-sm opacity-80 mb-1">Vos dossiers sont toujours enregistrés sur cet appareil : ils n’ont pas été effacés.</p>
+   <p className="text-xs opacity-60 mb-4">{String((this.state.err&&this.state.err.message)||this.state.err)}</p>
+   <div className="flex flex-wrap gap-2"><button onClick={()=>location.reload()} className="rounded-xl px-4 py-2.5 font-semibold bg-navy-800 text-white glass-btn">Recharger</button>
+   <button onClick={rescue} className="glass glass-btn rounded-xl px-4 py-2.5 font-semibold">Télécharger une sauvegarde de secours</button></div></div>)}}
+ReactDOM.createRoot(document.getElementById('root')).render(<ErrorBoundary><App/></ErrorBoundary>);document.getElementById('boot').remove();
 if('serviceWorker' in navigator)addEventListener('load',async()=>{try{
  const had=!!navigator.serviceWorker.controller;const reg=await navigator.serviceWorker.register('sw.js',{updateViaCache:'none'});
  const show=()=>{if(document.getElementById('upd'))return;const b=document.createElement('div');b.id='upd';b.setAttribute('data-testid','update');b.className='fixed top-3 inset-x-3 z-50 rounded-2xl bg-navy-800 text-white shadow-2xl p-3 flex items-center gap-3';b.innerHTML='<span class="flex-1 text-sm font-semibold">Mise à jour disponible</span><button class="rounded-xl bg-white text-navy-900 px-3 py-2 text-sm font-bold">Recharger</button>';b.querySelector('button').onclick=()=>location.reload();document.body.appendChild(b)};
@@ -204,7 +239,7 @@ if('serviceWorker' in navigator)addEventListener('load',async()=>{try{
  reg.addEventListener('updatefound',()=>{const w=reg.installing;w&&w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller)show()})});
  setInterval(()=>reg.update().catch(()=>{}),30*60*1000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)reg.update().catch(()=>{})});
 }catch(e){}});
-window.ESTIMO_VERSION='2.2.0';
+window.ESTIMO_VERSION='2.3.0';
 </script>
 </body>
 </html>

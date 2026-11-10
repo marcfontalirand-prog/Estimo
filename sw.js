@@ -1,6 +1,6 @@
 // Estimo V2 — changer VERSION à chaque déploiement.
 self.addEventListener('message', (e) => { if (e.data === 'SKIP_WAITING') self.skipWaiting(); });
-const VERSION = 'estimo-v2.2.0';
+const VERSION = 'estimo-v2.3.0';
 const SHELL = ['./', './index.html', './manifest.json', './icons/logo.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png', './data/dvf/06/index.json', './data/loyers/06.json'];
 const CDN = ['https://cdn.tailwindcss.com/3.4.16', 'https://unpkg.com/react@18.3.1/umd/react.production.min.js', 'https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js', 'https://unpkg.com/@babel/standalone@7.26.4/babel.min.js'];
 self.addEventListener('install', (e) => e.waitUntil((async () => {

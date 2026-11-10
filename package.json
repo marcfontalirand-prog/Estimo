@@ -1,0 +1,12 @@
+{
+  "name": "estimo",
+  "version": "2.3.0",
+  "private": true,
+  "type": "module",
+  "description": "Estimo — PWA d'estimation immobilière sur site (dossiers, comparatif DVF, estimation locative).",
+  "scripts": {
+    "build": "node tools/build-html.mjs",
+    "test": "node --test tests/*.mjs",
+    "check": "npm run test && npm run build && git diff --exit-code -- index.html"
+  }
+}

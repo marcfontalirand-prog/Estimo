@@ -3,7 +3,7 @@
 Usage : python3 tools/build-dvf.py 06 2023 2024 2025  (lit /tmp/dvf/<année>.csv.gz,
 téléchargés depuis https://files.data.gouv.fr/geo-dvf/latest/csv/<année>/departements/<dep>.csv.gz)
 Ne garde que les ventes d'un seul logement (1 maison ou 1 appartement, dépendances admises, aucun local commercial)."""
-import csv, gzip, json, os, sys
+import csv, gzip, json, os, re, sys
 from collections import defaultdict
 dep, years = sys.argv[1], sys.argv[2:]
 out = os.path.join(os.path.dirname(__file__), '..', 'data', 'dvf', dep)
@@ -34,5 +34,16 @@ for c, rows in sorted(by_c.items()):
     json.dump({'commune': c, 'nom': names[c], 'cols': ['date', 'prix', 'surface', 'type', 'lat', 'lon', 'terrain', 'vefa', 'parcelle'], 'rows': rows}, open(f'{out}/{c}.json', 'w'), separators=(',', ':'), ensure_ascii=False)
     la = [r[4] for r in rows]; lo = [r[5] for r in rows]
     idx[c] = {'nom': names[c], 'n': len(rows), 'bbox': [min(lo), min(la), max(lo), max(la)]}
-json.dump({'source': 'DVF Etalab, décembre 2025', 'departement': dep, 'annees': years, 'derniere_vente': maxd, 'communes': idx}, open(f'{out}/index.json', 'w'), separators=(',', ':'), ensure_ascii=False)
+json.dump({'source': 'DVF Etalab (geo-dvf)', 'departement': dep, 'annees': years, 'derniere_vente': maxd, 'communes': idx}, open(f'{out}/index.json', 'w'), separators=(',', ':'), ensure_ascii=False)
+# Garde la date d'arrêt des données affichée par l'application alignée sur les fichiers.
+js = os.path.join(os.path.dirname(__file__), '..', 'js', 'dvf.js')
+src = open(js, encoding='utf-8').read()
+found = re.search(r"export const DATA_CUTOFF = '(\d{4}-\d{2}-\d{2})';", src)
+if not found:
+    print('ATTENTION : DATA_CUTOFF introuvable dans js/dvf.js — a mettre a jour a la main')
+elif found.group(1) != maxd:
+    open(js, 'w', encoding='utf-8').write(src.replace(found.group(0), "export const DATA_CUTOFF = '%s';" % maxd))
+    print('DATA_CUTOFF mis a jour : %s -> %s' % (found.group(1), maxd))
+else:
+    print('DATA_CUTOFF deja a jour : %s' % maxd)
 print(len(idx), sum(v['n'] for v in idx.values()), maxd)
