@@ -317,7 +317,7 @@ if('serviceWorker' in navigator)addEventListener('load',async()=>{try{
  reg.addEventListener('updatefound',()=>{const w=reg.installing;w&&w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller)show()})});
  setInterval(()=>reg.update().catch(()=>{}),30*60*1000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)reg.update().catch(()=>{})});
 }catch(e){}});
-window.ESTIMO_VERSION='2.5.0';
+window.ESTIMO_VERSION='2.5.1';
 </script>
 </body>
 </html>
