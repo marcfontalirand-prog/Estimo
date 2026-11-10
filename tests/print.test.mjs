@@ -60,10 +60,34 @@ test('la version de l’application est imprimée sur le document', () => {
 test('l’app imprime le document depuis sa propre page (pas de fenêtre surgissante)', () => {
   const app = readFileSync(ROOT + 'index.html', 'utf8');
   assert.match(app, /<div id="print-doc" aria-hidden="true">/);
-  assert.match(app, /#root,#boot,noscript,#upd\{display:none !important\}/);
-  assert.match(app, /#print-doc\{display:block !important\}/);
+  assert.match(app, /#root,#boot,noscript,#upd,#print-bar\{display:none !important\}/);
+  assert.match(app, /#print-doc\{display:block !important/);
   assert.match(app, /function avisInPage\(html\)/);
   assert.match(app, /if\(mode==='print'\)\{try\{avisInPage\(avisDoc\(d,A\)\.html\)/);
+});
+
+test('impression : l’interface quitte la page avant les dialogues, écran comme papier', () => {
+  const app = readFileSync(ROOT + 'index.html', 'utf8');
+  // Le mode impression retire #root de la page : même un moteur qui rend l écran ne sort pas les onglets sombres.
+  assert.match(app, /html\.printing #root,html\.printing #boot,html\.printing noscript,html\.printing #upd\{display:none !important\}/);
+  assert.match(app, /html\.printing,html\.printing body\{background:#fff !important/);
+  assert.match(app, /function enterPrintMode\(\)/);
+  assert.match(app, /addEventListener\('beforeprint'/);
+  assert.match(app, /#print-doc \.sheet,#print-doc section\{background:#fff !important\}/);
+  assert.match(app, /<meta name="color-scheme" content="only light">/);
+});
+
+test('mire d’impression : une page blanche qui démasque un assombrissement de l’appareil', () => {
+  const app = readFileSync(ROOT + 'index.html', 'utf8');
+  assert.match(app, /function mireDoc\(\)/);
+  assert.match(app, /function openMire\(\)/);
+  assert.match(app, /Mire d’impression<\/Btn>/);
+  const m = app.slice(app.indexOf('function mireDoc()'), app.indexOf('function openMire()'));
+  assert.match(m, /width:210mm/);
+  assert.match(m, /background:#fff/);
+  for (const c of ['#ffffff', '#000000', '#e60012', '#00a04a', '#0068b7', '#0b1f3a']) assert.ok(m.includes(c), c);
+  // Aucun aplat pleine page sombre dans la mire.
+  assert.doesNotMatch(m, /height:296\.6mm;background:#0b1f3a/);
 });
 
 test('la version affichée dans l’app est la version servie, pas une étiquette figée', () => {
@@ -74,4 +98,17 @@ test('la version affichée dans l’app est la version servie, pas une étiquett
   assert.match(sw, new RegExp('estimo-v' + v[1].replace(/\./g, '\\.')));
   assert.match(app, /Estimation sur site · v\{window\.ESTIMO_VERSION/);
   assert.doesNotMatch(app, /Estimation sur site · V2\.5</); // l'ancienne étiquette figée
+});
+
+test('le mode impression retire l’interface de la page, même sans @media print', () => {
+  const app = readFileSync(ROOT + 'index.html', 'utf8');
+  // L'interface est masquée par une classe appliquée avant window.print() : un moteur
+  // qui rend l'écran (iOS) ne peut donc pas sortir les onglets sombres sur le papier.
+  assert.match(app, /html\.printing #root,html\.printing #boot,html\.printing noscript,html\.printing #upd\{display:none !important\}/);
+  assert.match(app, /html\.printing #print-doc\{display:block !important/);
+  assert.match(app, /function enterPrintMode\(\)\{document\.documentElement\.classList\.add\('printing'\)/);
+  assert.match(app, /function exitPrintMode\(\)/);
+  assert.match(app, /addEventListener\('afterprint',exitPrintMode\)/);
+  assert.match(app, /enterPrintMode\(\);setTimeout\(printAvis/);
+  assert.match(app, /id="print-bar"/);
 });
