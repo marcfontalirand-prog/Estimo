@@ -2,14 +2,21 @@
 
 PWA mobile-first d'estimation immobilière sur site, sans publicité, fonctionnant hors ligne.
 
-- `index.html` : application complète (fichier unique, React 18 + Tailwind + Babel via CDN). **Générée** par `node tools/build-html.mjs` à partir de `src/app.template.html` en y injectant `js/dvf.js` et `js/loyers.js` (modules testés). Ne jamais éditer `index.html` à la main.
+- `index.html` : application complète (fichier unique, React 18 + Tailwind + Babel via CDN). **Générée** par `node tools/build-html.mjs` à partir de `src/app.template.html` en y injectant `js/dvf.js`, `js/loyers.js`, `js/ajust.js` et `js/snap.js` (modules testés). Ne jamais éditer `index.html` à la main.
 - `manifest.json`, `sw.js`, `icons/` : PWA installable, prête pour PWABuilder.
-- Dossiers clients stockés dans `localStorage` (`estimo.v2.dossiers`), photos compressées à 800 px de large (JPEG). **Sauvegarde / restauration** par fichier JSON depuis l'accueil (fusion sans perte : en cas de doublon, la version la plus récente est conservée).
+- Dossiers clients stockés dans `localStorage` (`estimo.v2.dossiers`), photos compressées à 800 px de large (JPEG).
+- **Sauvegarde automatique** : après chaque modification, un instantané silencieux de tous les dossiers est écrit dans IndexedDB (8 conservés, les 2 plus récents avec photos). Aucun fichier à télécharger, aucune action de l'utilisateur. L'écran **Paramètres** (⚙️ en haut de l'accueil) permet de revenir à une copie, d'exporter un fichier JSON et de le réimporter. Limite assumée : ces copies vivent dans l'appareil, seul un export manuel survit à un changement de téléphone.
+- `navigator.storage.persist()` demandé au démarrage : sans lui, Safari peut purger le stockage d'une PWA non installée après une longue période sans ouverture.
+- **Estimation ajustée** : `js/ajust.js` convertit les champs qualitatifs (étage, ascenseur, terrasse, vue, bruit, DPE, stationnement, points d'attention…) en coefficients explicites appliqués à la médiane DVF. Chaque ligne est plafonnée à ±8 %, le total à ±20 %, le positionnement libre de l'agent à ±10 points. Le détail est affiché dans l'application, dans la fiche remise au client et dans l'export texte.
 - `ErrorBoundary` : une erreur de rendu affiche un écran de secours avec rechargement et export des dossiers, au lieu d'un écran blanc.
 - 6 onglets : Client, Bien, Technique, Financier, Location, Médias (navigation par glissement).
 - Comparatif DVF à 300 m : `data/dvf/06/` (DVF Etalab geo-dvf, `tools/build-dvf.py`), repli API Cerema ; médiane après exclusion IQR.
 - Estimation locative : `data/loyers/06.json` (Carte des loyers ANIL / Ministère du Logement, édition 2025, `tools/build-loyers.py`), loyer vide, meublé (hypothèse +15 %), rendement brut, mention de l'encadrement des loyers.
 - Fiche d'estimation texte (partage / copie), export VCard.
+
+## Méthode d'estimation
+
+La médiane DVF décrit le marché d'un rayon de 300 m, toutes qualités confondues : elle contient donc déjà l'état moyen des biens vendus. Les coefficients de `js/ajust.js` ne remplacent pas cette réalité, ils mesurent un écart documenté par rapport au bien moyen du secteur — d'où des plafonds volontairement bas. La fourchette Q1–Q3 reçoit le même coefficient que la médiane, ce qui conserve la dispersion du marché. Toute estimation reste indicative et non contractuelle.
 
 ## Tests
 
@@ -18,6 +25,16 @@ node --test tests/*.mjs      # ou : npm test
 ```
 
 `package.json` déclare `"type": "module"` : sans lui, Node lit `js/*.js` comme du CommonJS et les tests échouent.
+
+Les tests couvrent le moteur DVF, les loyers, le moteur d'ajustement (21 cas), les instantanés, la fusion de sauvegardes et le contenu réel de la fiche remise au client.
+
+### Contrôle de rendu (sans navigateur)
+
+```bash
+BABEL_PATH=/chemin/vers/babel.min.js node tools/smoke.mjs
+```
+
+Compile le JSX d'`index.html` et exécute réellement `Home`, `Parametres`, `AjustPanel` et `Editor` avec un React factice : attrape les erreurs de référence et les textes faux (c'est ce contrôle qui a révélé que `EstimoDVF.DATA_CUTOFF` n'était pas exposé, donc affiché « Invalid Date »). Ignoré proprement si Babel est absent.
 
 ## Mise à jour des données DVF
 

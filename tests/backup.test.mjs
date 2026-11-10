@@ -58,4 +58,17 @@ assert.equal(r2.added, 0);
 // 8. aucun dossier : la fusion ne perd rien
 assert.equal(mergeDossiers([], [dos('z', 1)]).list.length, 1);
 
-console.log('8/8 tests sauvegarde OK');
+// 9. restauration d'un instantané automatique allégé : les photos locales sont conservées
+const local = [{ ...dos('a', 100), medias: [{ id: 'p1' }, { id: 'p2' }] }];
+const instantane = [{ ...dos('a', 200), medias: [], _mediasStripped: true, _mediasCount: 2 }];
+const r3 = mergeDossiers(local, instantane, { keepMedias: true });
+assert.equal(r3.list[0].medias.length, 2);            // photos conservées
+assert.equal(r3.list[0].client.nom, 'Dupont');        // reste du dossier mis à jour
+assert.equal(r3.list[0]._mediasStripped, undefined);  // marqueur nettoyé
+assert.equal(r3.list[0]._mediasCount, undefined);
+
+// 10. sans l'option, une restauration de fichier remplace le dossier tel quel
+const r4 = mergeDossiers(local, instantane);
+assert.equal(r4.list[0].medias.length, 0);
+
+console.log('9/9 tests sauvegarde OK');
