@@ -184,7 +184,7 @@ export function renderAvis(data) {
         <p>Ce document n'est ni une expertise immobilière, ni un mandat, ni une promesse de vente.</p>
       </div>
     </div>
-    ${DEMO ? `<div class="cov-testbar">Jeu de test du ${esc(visitDate)} : les ventes DVF sont réelles, le bien et le client sont une démonstration. Ne pas remettre à un client.</div>` : ''}
+    ${DEMO ? `<div class="cov-testbar">Document de test — ${esc(D.meta_version || 'Estimo')} — ${esc(visitDate)} : les ventes DVF sont réelles, le bien et le client sont une démonstration. Ne pas remettre à un client.</div>` : ''}
   </section>`;
 
   // ==========================================================================
@@ -704,11 +704,13 @@ export function renderAvis(data) {
       ['7', 'Licences ANIL et Cerema', 'Mike'],
       ['8', 'Propriété du document produit', 'Juriste + réseau'],
     ], 'todo')}
-    <p class="tiny">Généré par Estimo 2.4 le ${visitDate.split('-').reverse().join('/')} — ${dvf.source}, arrêt des données ${dvf.cutoff}.${DEMO ? ' Document de test : ne pas diffuser.' : ''}</p>
+    <p class="tiny">Généré par ${esc(D.meta_version || 'Estimo')} le ${visitDate.split('-').reverse().join('/')} — ${dvf.source}, arrêt des données ${dvf.cutoff}.${DEMO ? ' Document de test : ne pas diffuser.' : ''}</p>
   `);
 
   // ==========================================================================
   return `<!doctype html><html lang="fr"><head><meta charset="utf-8">
+<meta name="color-scheme" content="only light">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Avis de valeur — ${esc(adresse)} — TEST</title>
 <style>${CSS}</style></head><body>
 ${cover}${sommaire}${agence}${bien1}${bien2}${secteur}${marche}${methode}${estimation}${scorePage}${comps1Page}${comps2Page}${delais}${diagnostics}${honoraires}${lexiquePage}${mentions}${journal}
@@ -718,13 +720,16 @@ ${cover}${sommaire}${agence}${bien1}${bien2}${secteur}${marche}${methode}${estim
 function medianOf(a) { const s = [...a].sort((x, y) => x - y); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
 function monthsBetween(a, b) { const d = (new Date(b) - new Date(a)) / 2.6298e9; return Math.round(d); }
 
-const CSS = `:root{--navy:#0b1f3a;--navy2:#16305a;--ink:#111c2e;--muted:#5b6b82;--line:#dde5ef;--soft:#f4f7fb;--tint:#eef3f9;--green:#0f9d6e;--amber:#8a5a00;--amber-bg:#fffaef;--red:#b42318}
+const CSS = `:root{color-scheme:only light;--navy:#0b1f3a;--navy2:#16305a;--ink:#111c2e;--muted:#5b6b82;--line:#dde5ef;--soft:#f4f7fb;--tint:#eef3f9;--green:#0f9d6e;--amber:#8a5a00;--amber-bg:#fffaef;--red:#b42318}
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;background:#fff}
 body{font-family:'Liberation Sans','DejaVu Sans',Arial,sans-serif;color:var(--ink);font-size:9.3pt;line-height:1.42;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 /* Document d'impression : pas d'aplat sombre, le bleu sert de texte et de filet.
    Les seuls fonds colorés sont des teintes claires (>= 90 % de blanc). */
 @page{size:A4;margin:0}
+/* Impression : le papier reste blanc, quoi que fasse le navigateur. */
+@media print{html,body{background:#fff !important;color:#111c2e !important}.sheet{background:#fff !important}}
+@media (prefers-color-scheme:dark){html,body,.sheet{background:#fff !important}}
 .sheet{width:210mm;height:296.6mm;position:relative;overflow:hidden;padding:15mm 15mm 13mm;page-break-after:always;background:#fff}
 .sheet:last-child{page-break-after:auto}
 p{margin:0 0 3.2mm}

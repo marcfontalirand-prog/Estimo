@@ -13,7 +13,22 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import { normalizeRow, analyse, stats, median } from '../../js/dvf.js';
 import { computeAjust } from '../../js/ajust.js';
-import { buildAvis } from '../../js/pdfdoc.js';
+// PDFDOC_INLINED=1 : on teste le module tel qu'il est servi (extrait de index.html),
+// pas la source. Garantit que la version en ligne produit bien le meme document.
+let buildAvis;
+if (process.env.PDFDOC_INLINED === '1') {
+  const index = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
+  const start = index.indexOf('// ---- js/pdfdoc.js ----');
+  if (start < 0) throw new Error('bloc pdfdoc introuvable dans index.html');
+  let src = index.slice(start);
+  src = src.slice(0, src.indexOf('window.EstimoPDF='));
+  const cut = src.indexOf('window.EstimoDVF=');
+  if (cut > 0) src = src.slice(0, cut);
+  buildAvis = new Function('window', 'document', src + 'return buildAvis;')({}, { baseURI: 'https://x/' });
+  console.log('module pdfdoc : extrait de index.html (version servie)');
+} else {
+  ({ buildAvis } = await import('../../js/pdfdoc.js'));
+}
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '../..');
@@ -123,7 +138,7 @@ writeFileSync(join(HERE, `out/${slug}.data.json`), JSON.stringify({ dvf: { ...dv
 // On vérifie au passage que le module recalcule exactement le même score que le prototype.
 const appDvf = { ...dvf, surfaceTol: PARAMS.tol, since: sinceDate,
   comps: dvf.kept.map((s) => ({ date: s.date, prix: s.prix, surface: s.surface, prixM2: Math.round(s.prixM2), distance: s.distance })) };
-const doc = buildAvis({ ...dossier, dvf: appDvf }, { ajust: A, visitDate, cutoff: CUTOFF, params: PARAMS, demo: true });
+const doc = buildAvis({ ...dossier, dvf: appDvf }, { ajust: A, visitDate, cutoff: CUTOFF, params: PARAMS, demo: true, appVersion: 'Estimo 2.5.2' });
 if (doc.data.score.total !== scoreTotal) throw new Error('divergence de score module/prototype : ' + doc.data.score.total + ' vs ' + scoreTotal);
 writeFileSync(join(HERE, `out/${slug}.html`), doc.html);
 

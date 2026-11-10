@@ -1,6 +1,6 @@
 {
   "name": "estimo",
-  "version": "2.5.1",
+  "version": "2.5.2",
   "private": true,
   "type": "module",
   "description": "Estimo — PWA d'estimation immobilière sur site (dossiers, comparatif DVF, estimation locative).",
