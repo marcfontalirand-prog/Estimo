@@ -1,0 +1,71 @@
+{
+  "_comment": "Dossier de test pour le prototype PDF Estimo. Le bien, le client et ses caractéristiques sont une fixture de démonstration ; seules les ventes DVF sont réelles. Ne pas utiliser en rendez-vous.",
+  "id": "demo-le-cannet",
+  "created": 1762812000000,
+  "updated": 1762812000000,
+  "client": {
+    "type": "Appartement",
+    "nom": "Test",
+    "prenom": "Jean",
+    "tel": "06 00 00 00 00",
+    "email": "jean.test@example.com",
+    "adresse": "Boulevard Sadi Carnot, 06110 Le Cannet"
+  },
+  "bien": {
+    "carrez": "68",
+    "habitable": "68",
+    "terrain": "",
+    "jardin": "",
+    "balcon": "4",
+    "terrasse": "12",
+    "cave": "6",
+    "pieces": "3",
+    "chambres": "2",
+    "sdb": "1",
+    "hsp": "2,55",
+    "etage": "3",
+    "ascenseur": true,
+    "exposition": "Sud",
+    "visavis": "Aucun",
+    "bruit": "Calme",
+    "vue": "Dégagée"
+  },
+  "technique": {
+    "chauffage": "Chauffage individuel gaz",
+    "energie": "Gaz",
+    "isolation": "Bonne",
+    "menuiseries": "Double vitrage",
+    "dpe": "D",
+    "annee": "1975",
+    "cuisine": true,
+    "parking": "1 place en sous-sol",
+    "borneVE": false,
+    "climatisation": false,
+    "piscine": false,
+    "travaux": "Cuisine refaite en 2021, salle d'eau refaite en 2022",
+    "toiture": false,
+    "fissures": false,
+    "humidite": false,
+    "amiante": false,
+    "notesEtat": "Bon état général"
+  },
+  "financier": {
+    "taxeFonciere": "1245",
+    "charges": "1860",
+    "motivation": "Succession",
+    "delai": "3 mois",
+    "prixAttendu": "295000",
+    "notes": ""
+  },
+  "medias": [],
+  "dvf": null,
+  "loyer": null,
+  "ajust": {
+    "over": {},
+    "off": [],
+    "manuel": 0
+  },
+  "_commune": "06030",
+  "_lat": 43.5766,
+  "_lon": 7.0193
+}

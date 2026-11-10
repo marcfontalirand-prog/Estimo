@@ -36,6 +36,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,sans-s
 /* ===== Moteur DVF (copie générée depuis js/dvf.js — ne pas éditer ici) ===== */
 /*DVF_ENGINE*/
 window.EstimoDVF={priceNear,geocode,SOURCE_LABEL,FALLBACK_LABEL,DATA_CUTOFF,median,rentEstimate,LOYERS_BASE,MEUBLE_PRIME};
+// Module « avis de valeur » (js/pdfdoc.js) — rendu HTML A4, pur, testé sous Node.
+window.EstimoPDF={buildAvis,renderAvis,scoreConfiance,dvfFromApp,makeHelpers,PDFDOC_VERSION,AGENCE_DEFAUT,CUTOFF_DEFAUT};
 </script>
 <script type="text/babel" data-presets="react">
 const {useState,useEffect,useRef,useMemo,useCallback}=React;
@@ -123,7 +125,7 @@ return(<div data-testid="sharebar"><div className={`flex gap-1.5 ${compact?'':'g
 
 function Home({list,open,create,del,dark,setDark,parametres,snap}){const nb=list.length;
 const used=useMemo(()=>Math.round(new Blob([JSON.stringify(list)]).size/1024),[list]);return(<div className="max-w-3xl mx-auto px-4 pb-24" style={{paddingTop:'max(env(safe-area-inset-top),1rem)'}}>
-<header className="flex items-center justify-between mb-6"><div className="flex items-center gap-3"><Logo size={44}/><div><h1 className="text-2xl font-extrabold tracking-tight">Estimo</h1><p className="text-xs opacity-70">Estimation sur site · V2.4</p></div></div><div className="flex items-center gap-2"><button onClick={parametres} className="glass glass-btn rounded-full w-11 h-11 text-lg" aria-label="Paramètres">⚙️</button><button onClick={()=>setDark(!dark)} className="glass glass-btn rounded-full w-11 h-11 text-lg" aria-label="Mode sombre">{dark?'☀️':'🌙'}</button></div></header>
+<header className="flex items-center justify-between mb-6"><div className="flex items-center gap-3"><Logo size={44}/><div><h1 className="text-2xl font-extrabold tracking-tight">Estimo</h1><p className="text-xs opacity-70">Estimation sur site · V2.5</p></div></div><div className="flex items-center gap-2"><button onClick={parametres} className="glass glass-btn rounded-full w-11 h-11 text-lg" aria-label="Paramètres">⚙️</button><button onClick={()=>setDark(!dark)} className="glass glass-btn rounded-full w-11 h-11 text-lg" aria-label="Mode sombre">{dark?'☀️':'🌙'}</button></div></header>
 <div className="rounded-3xl p-5 mb-5 bg-gradient-to-br from-navy-800 to-navy-950 text-white shadow-xl"><p className="text-sm opacity-80">Dossiers enregistrés</p><p className="text-5xl font-extrabold my-1" data-testid="count">{nb}</p><p className="text-xs opacity-70">Stockés sur cet appareil (hors ligne)</p><button onClick={create} className="mt-4 w-full rounded-xl py-3 font-bold bg-white/15 backdrop-blur border border-white/30 glass-btn">＋ Nouvelle estimation</button>
 <p className="text-[11px] opacity-70 mt-2" data-testid="storage">Sauvegarde automatique · {nb} dossier(s) · ~{used} Ko{snap?' · dernière copie '+new Date(snap.at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):''}</p></div>
 <h2 className="font-bold mb-3">Dossiers récents</h2>
@@ -165,11 +167,35 @@ return(<Card title="Comparatif DVF (300 m)"><p className="text-xs opacity-75 mb-
 {v.n===0&&<p className="text-sm text-amber-600">Aucune vente comparable dans ce rayon : cochez « Élargir le rayon ».</p>}
 {v.n>v.comps.length&&<p className="text-xs opacity-70 mb-1">{v.comps.length} ventes les plus proches affichées sur {v.n} retenues.</p>}<div className="max-h-72 overflow-auto rounded-xl"><table className="w-full text-xs"><thead><tr className="text-left opacity-70"><th className="py-1">Date</th><th>Surface</th><th>Prix</th><th>€/m²</th><th>Dist.</th></tr></thead><tbody>{v.comps.map((c,i)=>(<tr key={i} className="border-t border-navy-100 dark:border-navy-800"><td className="py-1">{c.date.split('-').reverse().join('/')}</td><td>{c.surface} m²</td><td>{c.prix.toLocaleString('fr-FR')}</td><td className="font-semibold">{c.prixM2.toLocaleString('fr-FR')}</td><td>{c.distance} m</td></tr>))}</tbody></table></div></div>}</Card>)}
 
+// --- Avis de valeur : document A4 de 18 pages, produit sur l'appareil ---------
+// Aucune donnée ne quitte le téléphone : le HTML est construit ici, puis remis au
+// moteur d'impression du navigateur (« Enregistrer au format PDF »).
+function avisEtat(d){const A=computeAjust(d);const v=d.dvf;const ok=!!(A.ok&&v&&v.median&&v.n>0);
+ const why=!A.surface?'surface du bien manquante':!v||!v.median?'comparatif DVF non lancé':!v.n?'aucune vente comparable':'';return{A,ok,why};}
+function avisDoc(d,A){return EstimoPDF.buildAvis(d,{ajust:A,cutoff:EstimoDVF.DATA_CUTOFF,demo:true,appVersion:'Estimo '+(window.ESTIMO_VERSION||'2.5')});}
+function openAvis(d,mode){const{A,ok,why}=avisEtat(d);
+ if(!ok)return alert('Avis de valeur indisponible : '+why+'. Lancez le comparatif DVF ci-dessous.');
+ const w=window.open('','_blank');
+ if(!w)return alert('Fenêtre bloquée : autorisez les fenêtres surgissantes pour Estimo, ou utilisez « Télécharger le .html ».');
+ let doc;try{doc=avisDoc(d,A)}catch(e){w.close();return alert('Avis de valeur impossible : '+e.message)}
+ try{w.document.open();w.document.write(doc.html);w.document.close();w.document.title=doc.filename;}catch(e){return alert('Écriture impossible : '+e.message)}
+ if(mode==='print'){const go=()=>{try{w.focus();w.print()}catch(e){}};
+  if(w.document.readyState==='complete')setTimeout(go,600);else w.onload=()=>setTimeout(go,400);}
+}
+function saveAvis(d){const{A,ok,why}=avisEtat(d);if(!ok)return alert('Avis de valeur indisponible : '+why+'.');
+ try{const doc=avisDoc(d,A);download(doc.filename+'.html',doc.html,'text/html;charset=utf-8');}catch(e){alert('Avis de valeur impossible : '+e.message)}}
+function AvisCard({d}){const{A,ok,why}=avisEtat(d);const v=d.dvf;
+ return(<Card title="Avis de valeur (PDF)">
+ {ok?<div className="rounded-xl bg-navy-800 text-white p-3 mb-3" data-testid="avis-pret"><p className="text-[10px] uppercase opacity-80">Document prêt · 18 pages A4</p><p className="text-2xl font-extrabold">{eur(A.valeur)}</p><p className="text-xs opacity-85">fourchette {eur(A.bas)} – {eur(A.haut)} · {v.n} ventes à {v.radius} m · DVF arrêté au {fmtDate(EstimoDVF.DATA_CUTOFF)}</p></div>
+ :<div className="rounded-xl bg-amber-50 dark:bg-navy-900 border border-amber-300 dark:border-navy-700 p-3 mb-3 text-sm"><b>Avis de valeur indisponible.</b> Il manque : {why}. Lancez le comparatif DVF ci-dessous, puis revenez ici.</div>}
+ <div className="flex flex-wrap gap-2"><Btn primary on={()=>openAvis(d,'print')} cls={ok?'':'opacity-50'}>🖨 Avis de valeur (PDF)</Btn><Btn on={()=>openAvis(d,'view')}>Aperçu</Btn><Btn on={()=>saveAvis(d)}>Télécharger le .html</Btn></div>
+ <p className="text-[11px] opacity-70 mt-2">Dans la fenêtre d’impression : <b>marges « aucune », échelle 100 %, graphiques d’arrière-plan activés</b>. Tout est calculé sur cet appareil, rien n’est envoyé. Document de test : ventes DVF réelles, mise en page à valider.</p></Card>);}
+
 function Tools({d,setDvf,setLoyer,update}){const [msg,setMsg]=useState('');const txt=fiche(d);
 const copy=async()=>{try{await navigator.clipboard.writeText(txt);setMsg('Fiche copiée dans le presse-papier ✓')}catch(e){const t=document.createElement('textarea');t.value=txt;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();setMsg('Fiche copiée ✓')}};
 const share=async()=>shareFiche(d,setMsg);const _old=async()=>{if(navigator.share){try{await navigator.share({title:'Fiche d’estimation Estimo',text:txt})}catch(e){}}else{copy();setMsg('Partage indisponible sur ce navigateur : fiche copiée.')}};
 const vcf=()=>shareContact(d,setMsg);const _oldv=()=>{const name=([d.client.prenom,d.client.nom].filter(Boolean).join('-')||'client').replace(/[^\p{L}\p{N}-]+/gu,'_');download(name+'.vcf',vcard(d.client),'text/vcard;charset=utf-8');setMsg('VCard générée ✓')};
-return(<><DvfPanel d={d} setDvf={setDvf}/><AjustPanel d={d} update={update}/><Card title="Fiche d’estimation"><pre className="whitespace-pre-wrap text-xs bg-white/60 dark:bg-navy-950/60 rounded-xl p-3 max-h-80 overflow-auto" data-testid="fiche">{txt}</pre><div className="flex flex-wrap gap-2 mt-3"><Btn primary on={share}>Partager</Btn><Btn on={copy}>Copier</Btn><Btn on={vcf}>Export VCard (.vcf)</Btn></div>{msg&&<p className="text-sm mt-2 text-emerald-600">{msg}</p>}</Card></>)}
+return(<><AvisCard d={d}/><DvfPanel d={d} setDvf={setDvf}/><AjustPanel d={d} update={update}/><Card title="Fiche d’estimation"><pre className="whitespace-pre-wrap text-xs bg-white/60 dark:bg-navy-950/60 rounded-xl p-3 max-h-80 overflow-auto" data-testid="fiche">{txt}</pre><div className="flex flex-wrap gap-2 mt-3"><Btn primary on={share}>Partager</Btn><Btn on={copy}>Copier</Btn><Btn on={vcf}>Export VCard (.vcf)</Btn></div>{msg&&<p className="text-sm mt-2 text-emerald-600">{msg}</p>}</Card></>)}
 
 function Editor({d,update,back}){const [tab,setTab]=useState(0);const [drag,setDrag]=useState(0);const sx=useRef(null);const scroller=useRef(null);
 const set=(sec,k)=>(v)=>update(x=>({...x,[sec]:{...x[sec],[k]:v}}));
@@ -247,7 +273,7 @@ return(<div className="max-w-3xl mx-auto px-4 pb-24" style={{paddingTop:'max(env
 {msg?<p className="text-sm font-semibold text-emerald-600 mt-2" data-testid="backupmsg">{msg}</p>:null}
 <p className="text-[11px] opacity-70 mt-2">Une restauration ne supprime jamais un dossier plus récent ; si le stockage est plein, elle est refusée sans rien modifier.</p>
 </Card>
-<Card title="À propos"><p className="text-sm">Estimo V2.4 · PWA hors ligne, sans compte ni publicité.</p><p className="text-xs opacity-70 mt-1">Comparatif DVF Etalab · ventes jusqu’au {fmtDate(EstimoDVF.DATA_CUTOFF)}. Estimation indicative, non contractuelle.</p></Card>
+<Card title="À propos"><p className="text-sm">Estimo V2.5 · PWA hors ligne, sans compte ni publicité.</p><p className="text-xs opacity-70 mt-1">Comparatif DVF Etalab · ventes jusqu’au {fmtDate(EstimoDVF.DATA_CUTOFF)}. Estimation indicative, non contractuelle.</p></Card>
 </div>)}
 
 function App(){const [list,setList]=useState(load);const [cur,setCur]=useState(null);const [page,setPage]=useState('accueil');const [snap,setSnap]=useState(null);const [snaps,setSnaps]=useState([]);const [persisted,setPersisted]=useState(null);const [dark,setDark]=useState(()=>localStorage.getItem(THEME)?localStorage.getItem(THEME)==='dark':matchMedia('(prefers-color-scheme: dark)').matches);
@@ -291,7 +317,7 @@ if('serviceWorker' in navigator)addEventListener('load',async()=>{try{
  reg.addEventListener('updatefound',()=>{const w=reg.installing;w&&w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller)show()})});
  setInterval(()=>reg.update().catch(()=>{}),30*60*1000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)reg.update().catch(()=>{})});
 }catch(e){}});
-window.ESTIMO_VERSION='2.4.0';
+window.ESTIMO_VERSION='2.5.0';
 </script>
 </body>
 </html>

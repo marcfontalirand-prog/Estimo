@@ -48,3 +48,19 @@ node tools/build-html.mjs
 ```
 
 `tools/build-dvf.py` réécrit automatiquement `DATA_CUTOFF` dans `js/dvf.js` (date de la vente la plus récente), affichée dans l'interface et dans la fiche. Un test échoue si `index.json` et `DATA_CUTOFF` divergent. Geo-dvf publie deux éditions par an ; vérifier la présence du dossier de l'année en cours avant de conclure que les données sont à jour.
+
+## Avis de valeur (PDF)
+
+Depuis l'onglet **Financier**, sous le comparatif DVF, le bouton **Avis de valeur (PDF)** produit
+un document A4 de 18 pages à partir du dossier ouvert : mise en page, pagination, sommaire et
+tableaux sont générés sur l'appareil (`js/pdfdoc.js`), puis remis au moteur d'impression du
+navigateur (« Enregistrer au format PDF »). Aucune donnée ne quitte le téléphone.
+
+- Le document exige un comparatif DVF lancé et une surface : sans médiane, pas de document.
+- Les rubriques qu'aucune donnée ne peut remplir (identité de l'agence, honoraires, délais de
+  vente, secteur) restent des emplacements balisés `à compléter` : jamais inventées.
+- Le bandeau « document de test » et le bloc d'agence neutre sont les valeurs par défaut tant que
+  la marque, les mentions légales et les licences (ANIL, Cerema) ne sont pas tranchées.
+- Réglages d'impression : marges « aucune », échelle 100 %, graphiques d'arrière-plan activés.
+- Tests : `node --test tests/pdfdoc.test.mjs` (les cas Le Cannet 308 176 € / 86 sur 100 et
+  Mougins 48 sur 100 sont rejoués à chaque exécution).
