@@ -192,7 +192,8 @@ check('Avis de valeur : deux sorties sur la carte, feuille fermée au départ', 
   for (const interdit of ['Copier le résumé', 'Autres apps', 'Fichier .html']) {
     if (t.includes(interdit)) throw new Error('la feuille est rendue alors qu\u2019elle doit rester fermée : ' + interdit);
   }
-  if (t.includes('Télécharger le .html')) throw new Error('ancien bouton encore rendu');
+  if (t.includes('Télécharger')) throw new Error('ancien bouton de téléchargement encore rendu');
+  if (/\.html/i.test(t)) throw new Error('mention .html encore rendue sur la carte');
 });
 
 check('Avis de valeur indisponible : Partager renvoie vers le comparatif, sans feuille', () => {
@@ -201,12 +202,18 @@ check('Avis de valeur indisponible : Partager renvoie vers le comparatif, sans f
   if (t.includes('Copier le résumé')) throw new Error('feuille ouverte sur un dossier sans comparatif');
 });
 
-check('Feuille de partage : six sorties, avertissement de document de test', () => {
+check('Feuille de partage : cinq sorties, aucune trace de fichier .html', () => {
   const d = mkDos({ dvf: DVFILE });
   const A = E.computeAjust(d);
-  has(E.AvisPartage({ d, A, onClose: noop }),
-    'Partager l\u2019avis de valeur', 'Imprimante', 'WhatsApp', 'E-mail', 'Fichier .html',
+  const t = has(E.AvisPartage({ d, A, onClose: noop }),
+    'Partager l\u2019avis de valeur', 'Imprimante', 'WhatsApp', 'E-mail',
     'Copier le résumé', 'Autres apps', 'Document de test', 'ne pas diffuser', 'pas les 18 pages');
+  for (const interdit of ['Fichier .html', 'fichier .html', '.html', 'Télécharger']) {
+    if (t.includes(interdit)) throw new Error('résidu de téléchargement dans la feuille : ' + interdit);
+  }
+  const tuiles = ['Imprimante', 'WhatsApp', 'E-mail', 'Copier le résumé', 'Autres apps'];
+  for (const tt of tuiles) if (!t.includes(tt)) throw new Error('sortie absente : ' + tt);
+  if (tuiles.length !== 5) throw new Error('la feuille doit proposer 5 sorties');
 });
 
 check('Résumé partagé : chiffres réels, aucun trou, mention non contractuelle', () => {

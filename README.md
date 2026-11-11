@@ -57,19 +57,21 @@ node tools/build-html.mjs
 Depuis l'onglet **Financier**, en bas de la page (après le comparatif DVF et les ajustements), la carte
 **Avis de valeur** propose deux sorties : **Aperçu** (relire à l'écran, sans imprimer) et **Partager**.
 
-**Partager** ouvre une feuille de six sorties :
+**Partager** ouvre une feuille de cinq sorties :
 
 | Sortie | Ce qu'elle fait |
 |---|---|
 | Imprimante | Monte le document A4 dans la page, puis ouvre la fenêtre d'impression (« Enregistrer au format PDF »). |
 | WhatsApp | Ouvre `wa.me` avec le résumé chiffré du dossier. Le message ne porte pas les 18 pages. |
 | E-mail | Ouvre `mailto:` vers l'adresse du dossier (vide si absente), objet et corps pré-remplis. |
-| Fichier .html | Télécharge `avis-de-valeur-<client>-<date>.html`, document autonome, à joindre soi-même. |
 | Copier le résumé | Copie le même résumé dans le presse-papier. |
 | Autres apps | Feuille de partage du système (`navigator.share`), avec le fichier quand le navigateur l'accepte (`canShare`), sinon le texte seul. |
 
 Aucune sortie n'envoie quoi que ce soit d'elle-même : chacune ouvre une application, l'envoi reste un
-geste de l'utilisateur, et rien ne part vers un serveur. La feuille est montée dans le `<body>`
+geste de l'utilisateur, et rien ne part vers un serveur. Le fichier `.html` n'est plus proposé comme
+sortie : c'est un format de travail interne, pas un livrable client. Le document entier s'obtient par
+**Imprimante › Enregistrer en PDF** (le format qu'un client attend) ou par **Autres apps**, qui peut
+transmettre le fichier à WhatsApp, Mail ou Drive quand le navigateur l'accepte. La feuille est montée dans le `<body>`
 (`createPortal`) : le carrousel des onglets est transformé, un `position:fixed` y serait piégé.
 
 - Le document exige un comparatif DVF lancé et une surface : sans médiane, pas de document.

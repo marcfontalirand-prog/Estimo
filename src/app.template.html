@@ -251,18 +251,17 @@ function openAvis(d,mode){const{A,ok,why}=avisEtat(d);
  if(!ok)return alert('Avis de valeur indisponible : '+why+'. Lancez le comparatif DVF ci-dessus.');
  if(mode==='print'){try{avisInPage(avisDoc(d,A).html);enterPrintMode();setTimeout(printAvis,350);return}catch(e){alert('Document impossible : '+e.message+' — ouverture de l’aperçu.');exitPrintMode();mode='view'}}
  const w=window.open('','_blank');
- if(!w)return alert('Fenêtre bloquée : autorisez les fenêtres surgissantes pour Estimo, ou utilisez « Partager › Fichier .html ».');
+ if(!w)return alert('Fenêtre bloquée : autorisez les fenêtres surgissantes pour Estimo, ou passez par « Partager › Imprimante ».');
  let doc;try{doc=avisDoc(d,A)}catch(e){w.close();return alert('Avis de valeur impossible : '+e.message)}
  try{w.document.open();w.document.write(doc.html);w.document.close();w.document.title=doc.filename;}catch(e){return alert('Écriture impossible : '+e.message)}
  if(mode==='print'){const go=()=>{try{w.focus();w.print()}catch(e){}};
   if(w.document.readyState==='complete')setTimeout(go,600);else w.onload=()=>setTimeout(go,400);}
 }
-function saveAvis(d){const{A,ok,why}=avisEtat(d);if(!ok)return alert('Avis de valeur indisponible : '+why+'.');
- try{const doc=avisDoc(d,A);download(doc.filename+'.html',doc.html,'text/html;charset=utf-8');}catch(e){alert('Avis de valeur impossible : '+e.message)}}
 // --- Partage de l'avis de valeur ---------------------------------------------
 // Le document fait 18 pages : il ne tient pas dans un message. WhatsApp et
-// l'e-mail emportent donc un résumé chiffré ; le fichier lui-même se télécharge,
-// ou part par la feuille du système. Rien ne part sans un geste de l'utilisateur.
+// l'e-mail emportent donc un résumé chiffré ; le document entier part par
+// l'impression (« Enregistrer en PDF ») ou la feuille du système.
+// Rien ne part sans un geste de l'utilisateur.
 function avisResume(d,A){
  const v=d.dvf,S=A.surface||surfRef(d),ag=agenceDoc(),L=[];
  L.push('AVIS DE VALEUR'+(d.client.adresse?' — '+d.client.adresse:''));
@@ -308,7 +307,6 @@ function AvisPartage({d,A,onClose}){
   {id:'partage-imprimante',icon:'🖨',label:'Imprimante',cls:'bg-navy-800 text-white shadow-lg',on:()=>{onClose();openAvis(d,'print')}},
   {id:'partage-whatsapp',icon:'💬',label:'WhatsApp',cls:'glass !text-emerald-700 dark:!text-emerald-300',href:waAvisLink(d,A)},
   {id:'partage-email',icon:'✉️',label:'E-mail',cls:'glass',href:mailAvisLink(d,A)},
-  {id:'partage-fichier',icon:'⬇️',label:'Fichier .html',cls:'glass',on:()=>{onClose();saveAvis(d)}},
   {id:'partage-copier',icon:'📋',label:'Copier le résumé',cls:'glass',on:async()=>{await copyText(avisResume(d,A));fermer('Résumé copié ✓')}},
   {id:'partage-systeme',icon:'📤',label:'Autres apps',cls:'glass',on:async()=>{const r=await partagerAvis(d,A);if(r==='copy')fermer('Partage indisponible : résumé copié ✓');else onClose()}},
  ];
@@ -320,7 +318,7 @@ function AvisPartage({d,A,onClose}){
     <button type="button" onClick={()=>onClose()} aria-label="Fermer" className="glass rounded-full w-8 h-8 shrink-0 text-lg leading-none">×</button>
    </div>
    <div className="grid grid-cols-3 gap-2">{sorties.map(tuile)}</div>
-   <p className="text-[11px] opacity-70 mt-3">WhatsApp et l’e-mail emportent les chiffres clés, pas les 18 pages. Le document entier : <b>Imprimante › Enregistrer en PDF</b>, ou <b>Fichier .html</b> à joindre toi-même. <b>Autres apps</b> ouvre le partage du système, fichier compris quand le navigateur l’accepte.</p>
+   <p className="text-[11px] opacity-70 mt-3">WhatsApp et l’e-mail emportent les chiffres clés, pas les 18 pages. Pour envoyer le document entier : <b>Imprimante › Enregistrer en PDF</b>, ou <b>Autres apps</b> et tu choisis WhatsApp ou Mail dans la feuille du téléphone.</p>
    {AVIS_DEMO&&<p className="text-[11px] mt-2 rounded-xl bg-amber-50 dark:bg-navy-800 border border-amber-300 dark:border-navy-700 p-2 text-amber-800 dark:text-amber-200"><b>Document de test :</b> « ne pas diffuser » est imprimé sur chaque page. Ne l’envoie pas à un client en l’état.</p>}
   </div>
  </div>)
@@ -330,7 +328,7 @@ function AvisCard({d}){const{A,ok,why}=avisEtat(d);const v=d.dvf;const[part,setP
  {ok?<div className="rounded-xl bg-navy-800 text-white p-3 mb-3" data-testid="avis-pret"><p className="text-[10px] uppercase opacity-80">Document prêt · 18 pages A4</p><p className="text-2xl font-extrabold">{eur(A.valeur)}</p><p className="text-xs opacity-85">fourchette {eur(A.bas)} – {eur(A.haut)} · {v.n} ventes à {v.radius} m · DVF arrêté au {fmtDate(EstimoDVF.DATA_CUTOFF)}</p></div>
  :<div className="rounded-xl bg-amber-50 dark:bg-navy-900 border border-amber-300 dark:border-navy-700 p-3 mb-3 text-sm"><b>Avis de valeur indisponible.</b> Il manque : {why}. Lancez le comparatif DVF ci-dessus, puis revenez ici.</div>}
  <div className="flex flex-wrap gap-2"><Btn on={()=>openAvis(d,'view')} cls="flex-1">🔍 Aperçu</Btn><Btn primary on={()=>{if(ok)setPart(true);else openAvis(d,'view')}} cls={'flex-1 '+(ok?'':'opacity-50')}>📤 Partager</Btn></div>
- <p className="text-[11px] opacity-70 mt-2"><b>Aperçu</b> pour relire à l’écran. <b>Partager</b> propose : imprimante (ou « Enregistrer en PDF »), WhatsApp, e-mail, fichier .html, copie du résumé, autres applications. Dans la fenêtre d’impression : <b>marges « aucune », échelle 100 %, graphiques d’arrière-plan activés</b>. Tout est calculé sur cet appareil, rien n’est envoyé sans ton geste. Impression sombre ou grise ? Paramètres › Affichage : la mire d’impression dit si le défaut vient de l’appareil.</p>
+ <p className="text-[11px] opacity-70 mt-2"><b>Aperçu</b> pour relire à l’écran. <b>Partager</b> propose : imprimante (ou « Enregistrer en PDF »), WhatsApp, e-mail, copie du résumé, autres applications. Dans la fenêtre d’impression : <b>marges « aucune », échelle 100 %, graphiques d’arrière-plan activés</b>. Tout est calculé sur cet appareil, rien n’est envoyé sans ton geste. Impression sombre ou grise ? Paramètres › Affichage : la mire d’impression dit si le défaut vient de l’appareil.</p>
  {part&&<AvisPartage d={d} A={A} onClose={()=>setPart(false)}/>}</Card>);}
 
 // Onglet Financier : comparatif, ajustements, puis le document en bas.

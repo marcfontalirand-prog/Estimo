@@ -35,18 +35,24 @@ test('Carte : Partager sans comparatif renvoie vers le message d’indisponibili
   assert.match(carte, /Avis de valeur indisponible\./);
 });
 
-test('Feuille : six sorties nommées, une par geste', () => {
-  for (const id of ['partage-imprimante', 'partage-whatsapp', 'partage-email', 'partage-fichier', 'partage-copier', 'partage-systeme']) {
+test('Feuille : cinq sorties nommées, une par geste, aucun téléchargement de fichier', () => {
+  const ids = ['partage-imprimante', 'partage-whatsapp', 'partage-email', 'partage-copier', 'partage-systeme'];
+  for (const id of ids) {
     assert.match(feuille, new RegExp("id:'" + id + "'"), 'sortie manquante : ' + id);
   }
-  const labels = ['Imprimante', 'WhatsApp', 'E-mail', 'Fichier .html', 'Copier le résumé', 'Autres apps'];
-  for (const l of labels) assert.match(feuille, new RegExp("label:'" + l.replace('.', '\\.') + "'"), 'libellé manquant : ' + l);
+  const labels = ['Imprimante', 'WhatsApp', 'E-mail', 'Copier le résumé', 'Autres apps'];
+  for (const l of labels) assert.match(feuille, new RegExp("label:'" + l + "'"), 'libellé manquant : ' + l);
+  // Le fichier .html ne doit plus apparaître nulle part : ni tuile, ni libellé, ni texte d'aide.
+  assert.equal(ids.length, 5);
+  assert.doesNotMatch(feuille, /partage-fichier/);
+  assert.doesNotMatch(feuille, /\.html/i);
+  assert.doesNotMatch(feuille, /Télécharger/);
 });
 
 test('Feuille : l’imprimante passe par le chemin d’impression existant', () => {
   assert.match(feuille, /on:\(\)=>\{onClose\(\);openAvis\(d,'print'\)\}/);
-  // Et le fichier par le téléchargement existant, sans réécriture.
-  assert.match(feuille, /on:\(\)=>\{onClose\(\);saveAvis\(d\)\}/);
+  // Plus aucun téléchargement depuis la feuille : l'imprimante est la seule voie fichier.
+  assert.doesNotMatch(tpl, /function saveAvis/);
 });
 
 test('WhatsApp et e-mail : résumé chiffré, encodé, jamais un envoi automatique', () => {
