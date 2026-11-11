@@ -52,18 +52,32 @@ node tools/build-html.mjs
 
 `tools/build-dvf.py` réécrit automatiquement `DATA_CUTOFF` dans `js/dvf.js` (date de la vente la plus récente), affichée dans l'interface et dans la fiche. Un test échoue si `index.json` et `DATA_CUTOFF` divergent. Geo-dvf publie deux éditions par an ; vérifier la présence du dossier de l'année en cours avant de conclure que les données sont à jour.
 
-## Avis de valeur (PDF)
+## Avis de valeur
 
-Depuis l'onglet **Financier**, en bas de la page (après le comparatif DVF et les ajustements), le bouton **Avis de valeur (PDF)** produit
-un document A4 de 18 pages à partir du dossier ouvert : mise en page, pagination, sommaire et
-tableaux sont générés sur l'appareil (`js/pdfdoc.js`), puis remis au moteur d'impression du
-navigateur (« Enregistrer au format PDF »). Aucune donnée ne quitte le téléphone.
+Depuis l'onglet **Financier**, en bas de la page (après le comparatif DVF et les ajustements), la carte
+**Avis de valeur** propose deux sorties : **Aperçu** (relire à l'écran, sans imprimer) et **Partager**.
+
+**Partager** ouvre une feuille de six sorties :
+
+| Sortie | Ce qu'elle fait |
+|---|---|
+| Imprimante | Monte le document A4 dans la page, puis ouvre la fenêtre d'impression (« Enregistrer au format PDF »). |
+| WhatsApp | Ouvre `wa.me` avec le résumé chiffré du dossier. Le message ne porte pas les 18 pages. |
+| E-mail | Ouvre `mailto:` vers l'adresse du dossier (vide si absente), objet et corps pré-remplis. |
+| Fichier .html | Télécharge `avis-de-valeur-<client>-<date>.html`, document autonome, à joindre soi-même. |
+| Copier le résumé | Copie le même résumé dans le presse-papier. |
+| Autres apps | Feuille de partage du système (`navigator.share`), avec le fichier quand le navigateur l'accepte (`canShare`), sinon le texte seul. |
+
+Aucune sortie n'envoie quoi que ce soit d'elle-même : chacune ouvre une application, l'envoi reste un
+geste de l'utilisateur, et rien ne part vers un serveur. La feuille est montée dans le `<body>`
+(`createPortal`) : le carrousel des onglets est transformé, un `position:fixed` y serait piégé.
 
 - Le document exige un comparatif DVF lancé et une surface : sans médiane, pas de document.
-- Les rubriques qu'aucune donnée ne peut remplir (identité de l'agence, honoraires, délais de
-  vente, secteur) restent des emplacements balisés `à compléter` : jamais inventées.
-- Le bandeau « document de test » et le bloc d'agence neutre sont les valeurs par défaut tant que
-  la marque, les mentions légales et les licences (ANIL, Cerema) ne sont pas tranchées.
+- Le profil (Paramètres › Profil) remplit le bloc agence et les mentions légales ; les champs qu'aucune
+  donnée ne peut remplir (honoraires, délais de vente, secteur) restent balisés `à compléter` : jamais inventés.
+- Le bandeau « document de test » reste actif (`AVIS_DEMO` dans `src/app.template.html`) tant que les
+  mentions légales et les licences (ANIL, Cerema) ne sont pas tranchées ; la feuille de partage le rappelle.
 - Réglages d'impression : marges « aucune », échelle 100 %, graphiques d'arrière-plan activés.
 - Tests : `node --test tests/pdfdoc.test.mjs` (les cas Le Cannet 308 176 € / 86 sur 100 et
-  Mougins 48 sur 100 sont rejoués à chaque exécution).
+  Mougins 48 sur 100 sont rejoués à chaque exécution) et `tests/partage.test.mjs` (deux sorties sur la
+  carte, six dans la feuille, aucun envoi automatique).

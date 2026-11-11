@@ -66,7 +66,7 @@ const stubs = {
 
 // L app appelle window.addEventListener au chargement (afterprint) : window est globalThis ici.
 globalThis.addEventListener = noop; globalThis.removeEventListener = noop; globalThis.matchMedia = stubs.matchMedia; globalThis.scrollTo = noop;
-const names = ['Home', 'Parametres', 'ProfilPanel', 'AjustPanel', 'Editor', 'App', 'blank', 'computeAjust', 'fiche', 'profilVide', 'PROFIL_CHAMPS', 'completude', 'loadProfil', 'saveProfil', 'agenceDoc'];
+const names = ['Home', 'Parametres', 'ProfilPanel', 'AjustPanel', 'Editor', 'App', 'blank', 'computeAjust', 'fiche', 'profilVide', 'PROFIL_CHAMPS', 'completude', 'loadProfil', 'saveProfil', 'agenceDoc', 'avisResume', 'waAvisLink', 'mailAvisLink', 'AvisCard', 'AvisPartage'];
 new Function('window', 'document', 'Blob', 'URL', moteur)(globalThis, stubs.document, Blob, URL);
 const src = compiled + '\n;globalThis.__E={' + names.join(',') + '};';
 stubs.window = globalThis;
@@ -168,7 +168,7 @@ check('Parametres > Affichage : la mire d impression et le theme', () => {
 
 check('Parametres > Application : version et source des donn\u00e9es', () => {
   has(E.Parametres({ list: [], back: noop, restore: noop, backup: noop, snaps: [], persisted: true, restoreSnap: noop, sec: 'application' }),
-    'Version', '2.6.', '31/12/2025', '\u00c0 propos');
+    'Version', '2.7.', '31/12/2025', '\u00c0 propos');
 });
 
 check('Editor : l’onglet Financier affiche l’écart sur l’estimation ajustée', () => {
@@ -184,6 +184,58 @@ check('Editor : plus de carte Fiche d\u2019estimation dans Financier, avis de va
   if (iDvf < 0 || iAvis < 0) throw new Error('comparatif ou avis absent du rendu');
   if (!(iDvf < iAvis)) throw new Error('l\u2019avis de valeur doit venir apres le comparatif');
   if (!t.includes('Charges et fiscalit\u00e9')) throw new Error('onglet Financier incomplet');
+});
+
+check('Avis de valeur : deux sorties sur la carte, feuille fermée au départ', () => {
+  const d = mkDos({ dvf: DVFILE });
+  const t = has(E.AvisCard({ d }), 'Aperçu', 'Partager', 'Document prêt', '18 pages A4');
+  for (const interdit of ['Copier le résumé', 'Autres apps', 'Fichier .html']) {
+    if (t.includes(interdit)) throw new Error('la feuille est rendue alors qu\u2019elle doit rester fermée : ' + interdit);
+  }
+  if (t.includes('Télécharger le .html')) throw new Error('ancien bouton encore rendu');
+});
+
+check('Avis de valeur indisponible : Partager renvoie vers le comparatif, sans feuille', () => {
+  const t = render(E.AvisCard({ d: mkDos() }));
+  has(E.AvisCard({ d: mkDos() }), 'Avis de valeur indisponible', 'Partager');
+  if (t.includes('Copier le résumé')) throw new Error('feuille ouverte sur un dossier sans comparatif');
+});
+
+check('Feuille de partage : six sorties, avertissement de document de test', () => {
+  const d = mkDos({ dvf: DVFILE });
+  const A = E.computeAjust(d);
+  has(E.AvisPartage({ d, A, onClose: noop }),
+    'Partager l\u2019avis de valeur', 'Imprimante', 'WhatsApp', 'E-mail', 'Fichier .html',
+    'Copier le résumé', 'Autres apps', 'Document de test', 'ne pas diffuser', 'pas les 18 pages');
+});
+
+check('Résumé partagé : chiffres réels, aucun trou, mention non contractuelle', () => {
+  const d = mkDos({ dvf: DVFILE });
+  const A = E.computeAjust(d);
+  const txt = E.avisResume(d, A);
+  console.log('---- résumé partagé ----\n' + txt + '\n------------------------');
+  for (const m of ['undefined', 'null', 'NaN', '[object']) {
+    if (txt.includes(m)) throw new Error('trou dans le résumé (' + m + ') :\n' + txt);
+  }
+  if (!txt.includes('Valeur estimée')) throw new Error('valeur estimée absente :\n' + txt);
+  if (!txt.includes('24 ventes')) throw new Error('nombre de ventes absent :\n' + txt);
+  if (!txt.includes('€/m² après ajustements')) throw new Error('prix au m² absent :\n' + txt);
+  if (!txt.includes('31/12/2025')) throw new Error('date DVF absente :\n' + txt);
+  if (!txt.includes('Estimation indicative, non contractuelle')) throw new Error('mention absente');
+  if (/ ,|, ,|\n\n\n/.test(txt)) throw new Error('ponctuation orpheline :\n' + txt);
+  if (txt.includes('Laforêt')) throw new Error('profil vide : un nom d\u2019agence a été inventé');
+});
+
+check('Liens WhatsApp et e-mail : encodés, destinataire pris dans le dossier', () => {
+  const d = mkDos({ dvf: DVFILE, client: { ...E.blank().client, type: 'Appartement', nom: 'Dupont', email: 'client@exemple.fr', adresse: '12 bd Sadi Carnot' } });
+  const A = E.computeAjust(d);
+  const wa = E.waAvisLink(d, A), mai = E.mailAvisLink(d, A);
+  if (!wa.startsWith('https://wa.me/?text=')) throw new Error('lien WhatsApp inattendu : ' + wa.slice(0, 60));
+  if (/[ \n]/.test(wa)) throw new Error('lien WhatsApp non encodé');
+  if (decodeURIComponent(wa.split('text=')[1]) !== E.avisResume(d, A)) throw new Error('le lien WhatsApp ne porte pas le résumé');
+  if (!mai.startsWith('mailto:client%40exemple.fr?subject=')) throw new Error('lien mail inattendu : ' + mai.slice(0, 80));
+  if (!mai.includes('&body=')) throw new Error('corps du mail absent');
+  if (!decodeURIComponent(mai).includes('Avis de valeur — 12 bd Sadi Carnot')) throw new Error('objet du mail incomplet');
 });
 
 console.log('\n' + ok + ' contrôle(s) de rendu OK' + (fails.length ? ', ' + fails.length + ' échec(s)' : ''));
