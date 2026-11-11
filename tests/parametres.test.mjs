@@ -27,8 +27,13 @@ test('paramètres : thème à trois états, mémorisé tel quel et appliqué', (
   assert.match(app, /const THEMES=\[\[.light.,.Clair.\],\[.dark.,.Sombre.\],\[.auto.,.Auto.\]\]/);
   assert.match(app, /const dark=theme==='auto'\?sysDark:theme==='dark';/);
   assert.match(app, /localStorage\.setItem\(THEME,theme\)/);
-  // Le bouton lune de l'accueil reste un raccourci, il écrit un choix explicite.
-  assert.match(app, /setDark=\{\(v\)=>setTheme\(v\?'dark':'light'\)\}/);
+  // Le theme ne se change plus que dans les parametres : plus de raccourci sur l accueil.
+  const accueil = app.slice(app.indexOf('function Home('), app.indexOf('function Editor('));
+  assert.ok(accueil.length > 500, 'section accueil introuvable');
+  assert.ok(!accueil.includes('Mode sombre'), 'le bouton lune est encore present sur l accueil');
+  assert.ok(!accueil.includes('🌙'), 'l icone lune est encore presente sur l accueil');
+  assert.ok(accueil.includes('aria-label="Param\u00e8tres"'), 'le bouton Parametres doit rester sur l accueil');
+  assert.ok(!/setDark=/.test(app), 'un raccourci de theme subsiste sur l accueil');
   assert.match(app, /<Parametres [^>]*theme=\{theme\} setTheme=\{setTheme\}/);
 });
 

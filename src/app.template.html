@@ -140,9 +140,9 @@ return(<div data-testid="sharebar"><div className={`flex gap-1.5 ${compact?'':'g
 <B on={()=>shareFiche(d,say)} icon="📄" label="Fiche" cls="bg-navy-800 text-white"/><B on={()=>shareContact(d,say)} icon="👤" label="Contact" cls="glass"/><B href={waLink(d)} icon="💬" label="WhatsApp" cls="glass !text-emerald-700 dark:!text-emerald-300"/><B href={mailLink(d)} icon="✉️" label="Email" cls="glass"/><B on={async()=>{await copyText(fiche(d));say('Fiche copiée ✓')}} icon="📋" label="Copier" cls="glass"/></div>
 {msg&&<p className="text-xs mt-1 text-emerald-600 text-center">{msg}</p>}</div>)}
 
-function Home({list,open,create,del,dark,setDark,parametres,snap}){const nb=list.length;
+function Home({list,open,create,del,parametres,snap}){const nb=list.length;
 const used=useMemo(()=>Math.round(new Blob([JSON.stringify(list)]).size/1024),[list]);return(<div className="max-w-3xl mx-auto px-4 pb-24" style={{paddingTop:'max(env(safe-area-inset-top),1rem)'}}>
-<header className="flex items-center justify-between mb-6"><div className="flex items-center gap-3"><Logo size={44}/><div><h1 className="text-2xl font-extrabold tracking-tight">Estimo</h1><p className="text-xs opacity-70">Estimation sur site · v{window.ESTIMO_VERSION||'2.5'}</p></div></div><div className="flex items-center gap-2"><button onClick={parametres} className="glass glass-btn rounded-full w-11 h-11 text-lg" aria-label="Paramètres">⚙️</button><button onClick={()=>setDark(!dark)} className="glass glass-btn rounded-full w-11 h-11 text-lg" aria-label="Mode sombre">{dark?'☀️':'🌙'}</button></div></header>
+<header className="flex items-center justify-between mb-6"><div className="flex items-center gap-3"><Logo size={44}/><div><h1 className="text-2xl font-extrabold tracking-tight">Estimo</h1><p className="text-xs opacity-70">Estimation sur site · v{window.ESTIMO_VERSION||'2.5'}</p></div></div><div className="flex items-center gap-2"><button onClick={parametres} className="glass glass-btn rounded-full w-11 h-11 text-lg" aria-label="Paramètres">⚙️</button></div></header>
 <div className="rounded-3xl p-5 mb-5 bg-gradient-to-br from-navy-800 to-navy-950 text-white shadow-xl"><p className="text-sm opacity-80">Dossiers enregistrés</p><p className="text-5xl font-extrabold my-1" data-testid="count">{nb}</p><p className="text-xs opacity-70">Stockés sur cet appareil (hors ligne)</p><button onClick={create} className="mt-4 w-full rounded-xl py-3 font-bold bg-white/15 backdrop-blur border border-white/30 glass-btn">＋ Nouvelle estimation</button>
 <p className="text-[11px] opacity-70 mt-2" data-testid="storage">Sauvegarde automatique · {nb} dossier(s) · ~{used} Ko{snap?' · dernière copie '+new Date(snap.at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):''}</p></div>
 <h2 className="font-bold mb-3">Dossiers récents</h2>
@@ -396,7 +396,7 @@ const open=(id)=>{location.hash='#/d/'+id};const back=()=>{location.hash=''};
 const create=()=>{const d=blank();commit([...list,d]);open(d.id)};
 const d=list.find(x=>x.id===cur);const update=(fn)=>setList(l=>{const nl=l.map(x=>x.id===cur?{...fn(x),updated:Date.now()}:x);save(nl);return nl});
 if(page==='parametres')return <Parametres list={list} back={back} restore={restore} backup={backup} snaps={snaps} persisted={persisted} restoreSnap={restoreSnap} theme={theme} setTheme={setTheme} sec={(location.hash.split('/')[2])||undefined}/>;
-return d?<Editor key={d.id} d={d} update={update} back={back}/>:<Home list={list} open={open} create={create} del={(id)=>commit(list.filter(x=>x.id!==id))} dark={dark} setDark={(v)=>setTheme(v?'dark':'light')} parametres={()=>{location.hash='#/parametres'}} snap={snap}/>}
+return d?<Editor key={d.id} d={d} update={update} back={back}/>:<Home list={list} open={open} create={create} del={(id)=>commit(list.filter(x=>x.id!==id))} parametres={()=>{location.hash='#/parametres'}} snap={snap}/>}
 
 // Filet de sécurité : une erreur de rendu ne doit pas laisser un écran blanc devant un client.
 class ErrorBoundary extends React.Component{constructor(p){super(p);this.state={err:null}}

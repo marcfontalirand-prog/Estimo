@@ -96,16 +96,17 @@ const DVFILE = { type: 'appartement', n: 24, median: 4200, q1: 3800, q3: 4700, r
 const mkDos = (o = {}) => ({ ...E.blank(), client: { ...E.blank().client, type: 'Appartement', nom: 'Dupont', adresse: '12 bd Sadi Carnot' }, bien: { ...E.blank().bien, carrez: '65', etage: '4', terrasse: '12', vue: 'Mer' }, technique: { ...E.blank().technique, dpe: 'G' }, ...o });
 
 check('Home vide : un seul bouton de création, aucun téléchargement', () => {
-  has(E.Home({ list: [], open: noop, create: noop, del: noop, dark: false, setDark: noop, parametres: noop, snap: null }),
+  has(E.Home({ list: [], open: noop, create: noop, del: noop, parametres: noop, snap: null }),
     'Nouvelle estimation', 'Sauvegarde automatique', 'Aucun dossier', '⚙️');
-  const t = render(E.Home({ list: [], open: noop, create: noop, del: noop, dark: false, setDark: noop, parametres: noop, snap: null }));
+  const t = render(E.Home({ list: [], open: noop, create: noop, del: noop, parametres: noop, snap: null }));
+  for (const interdit of ['🌙', '☀️', 'Mode sombre']) if (t.includes(interdit)) throw new Error('raccourci de thème encore sur l accueil : ' + interdit);
   for (const interdit of ['Sauvegarder', 'Restaurer', 'télécharger']) if (t.includes(interdit)) throw new Error('élément retiré encore présent : ' + interdit);
   if (t.includes('Invalid Date')) throw new Error('date DVF non résolue : EstimoDVF.DATA_CUTOFF est-il exposé ?');
   if (!t.includes('31/12/2025')) throw new Error('date d’arrêt des ventes absente de l’accueil');
 });
 
 check('Home avec dossier et instantané : date de dernière copie', () => {
-  const t = render(E.Home({ list: [mkDos()], open: noop, create: noop, del: noop, dark: false, setDark: noop, parametres: noop, snap: { at: Date.now() } }));
+  const t = render(E.Home({ list: [mkDos()], open: noop, create: noop, del: noop, parametres: noop, snap: { at: Date.now() } }));
   if (!/dernière copie \d{2}\/\d{2} \d{2}:\d{2}/.test(t)) throw new Error('date de copie absente : ' + t.slice(0, 300));
 });
 
