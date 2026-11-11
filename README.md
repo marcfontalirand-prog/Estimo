@@ -10,6 +10,9 @@ PWA mobile-first d'estimation immobilière sur site, sans publicité, fonctionna
 - **Estimation ajustée** : `js/ajust.js` convertit les champs qualitatifs (étage, ascenseur, terrasse, vue, bruit, DPE, stationnement, points d'attention…) en coefficients explicites appliqués à la médiane DVF. Chaque ligne est plafonnée à ±8 %, le total à ±20 %, le positionnement libre de l'agent à ±10 points. Le détail est affiché dans l'application, dans la fiche remise au client et dans l'export texte.
 - `ErrorBoundary` : une erreur de rendu affiche un écran de secours avec rechargement et export des dossiers, au lieu d'un écran blanc.
 - 6 onglets : Client, Bien, Technique, Financier, Location, Médias (navigation par glissement).
+- Interface : thème **Clair / Sombre / Auto** dans Paramètres › Affichage (le bouton lune de l'accueil reste un raccourci) ; paramètres rangés en trois sections (Données, Affichage, Application).
+- Onglet Financier : charges et projet de vente, puis comparatif DVF, ajustements, et l'**avis de valeur en bas**. La fiche texte n'existe plus en carte dans cet onglet : elle est dans le bandeau de partage (Fiche, Contact, WhatsApp, Email, Copier).
+- Médias : le bouton **Galerie** ouvre le sélecteur d'images natif (champ `accept="image/*"` **sans** `multiple`, qui fait retomber certains navigateurs Android sur le sélecteur de fichiers) ; la sélection multiple reste disponible sous « Ajouter plusieurs photos d'un coup ».
 - Comparatif DVF à 300 m : `data/dvf/06/` (DVF Etalab geo-dvf, `tools/build-dvf.py`), repli API Cerema ; médiane après exclusion IQR.
 - Estimation locative : `data/loyers/06.json` (Carte des loyers ANIL / Ministère du Logement, édition 2025, `tools/build-loyers.py`), loyer vide, meublé (hypothèse +15 %), rendement brut, mention de l'encadrement des loyers.
 - Fiche d'estimation texte (partage / copie), export VCard.
@@ -51,7 +54,7 @@ node tools/build-html.mjs
 
 ## Avis de valeur (PDF)
 
-Depuis l'onglet **Financier**, sous le comparatif DVF, le bouton **Avis de valeur (PDF)** produit
+Depuis l'onglet **Financier**, en bas de la page (après le comparatif DVF et les ajustements), le bouton **Avis de valeur (PDF)** produit
 un document A4 de 18 pages à partir du dossier ouvert : mise en page, pagination, sommaire et
 tableaux sont générés sur l'appareil (`js/pdfdoc.js`), puis remis au moteur d'impression du
 navigateur (« Enregistrer au format PDF »). Aucune donnée ne quitte le téléphone.

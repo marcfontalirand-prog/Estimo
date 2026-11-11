@@ -81,7 +81,10 @@ test('mire d’impression : une page blanche qui démasque un assombrissement de
   const app = readFileSync(ROOT + 'index.html', 'utf8');
   assert.match(app, /function mireDoc\(\)/);
   assert.match(app, /function openMire\(\)/);
-  assert.match(app, /Mire d’impression<\/Btn>/);
+  // La mire vit dans Parametres > Affichage ; elle a quitte la fiche d avis le 11/11/2026.
+  assert.match(app, /<Btn primary on=\{openMire\}>/);
+  assert.match(app, /Card title="Diagnostic d’impression">/);
+  assert.doesNotMatch(app, /<Btn on=\{openMire\}>/);
   const m = app.slice(app.indexOf('function mireDoc()'), app.indexOf('function openMire()'));
   assert.match(m, /width:210mm/);
   assert.match(m, /background:#fff/);

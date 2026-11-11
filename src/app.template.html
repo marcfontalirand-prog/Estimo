@@ -237,7 +237,7 @@ function openMire(){const box=document.getElementById('print-doc');
  const lab=document.getElementById('print-bar-label');if(lab)lab.textContent='Mire d impression / 1 page A4';
  enterPrintMode()}
 function openAvis(d,mode){const{A,ok,why}=avisEtat(d);
- if(!ok)return alert('Avis de valeur indisponible : '+why+'. Lancez le comparatif DVF ci-dessous.');
+ if(!ok)return alert('Avis de valeur indisponible : '+why+'. Lancez le comparatif DVF ci-dessus.');
  if(mode==='print'){try{avisInPage(avisDoc(d,A).html);enterPrintMode();setTimeout(printAvis,350);return}catch(e){alert('Document impossible : '+e.message+' — ouverture de l’aperçu.');exitPrintMode();mode='view'}}
  const w=window.open('','_blank');
  if(!w)return alert('Fenêtre bloquée : autorisez les fenêtres surgissantes pour Estimo, ou utilisez « Télécharger le .html ».');
@@ -251,15 +251,12 @@ function saveAvis(d){const{A,ok,why}=avisEtat(d);if(!ok)return alert('Avis de va
 function AvisCard({d}){const{A,ok,why}=avisEtat(d);const v=d.dvf;
  return(<Card title="Avis de valeur (PDF)">
  {ok?<div className="rounded-xl bg-navy-800 text-white p-3 mb-3" data-testid="avis-pret"><p className="text-[10px] uppercase opacity-80">Document prêt · 18 pages A4</p><p className="text-2xl font-extrabold">{eur(A.valeur)}</p><p className="text-xs opacity-85">fourchette {eur(A.bas)} – {eur(A.haut)} · {v.n} ventes à {v.radius} m · DVF arrêté au {fmtDate(EstimoDVF.DATA_CUTOFF)}</p></div>
- :<div className="rounded-xl bg-amber-50 dark:bg-navy-900 border border-amber-300 dark:border-navy-700 p-3 mb-3 text-sm"><b>Avis de valeur indisponible.</b> Il manque : {why}. Lancez le comparatif DVF ci-dessous, puis revenez ici.</div>}
- <div className="flex flex-wrap gap-2"><Btn primary on={()=>openAvis(d,'print')} cls={ok?'':'opacity-50'}>🖨 Avis de valeur (PDF)</Btn><Btn on={()=>openAvis(d,'view')}>Aperçu</Btn><Btn on={openMire}>Mire d’impression</Btn><Btn on={()=>saveAvis(d)}>Télécharger le .html</Btn></div>
- <p className="text-[11px] opacity-70 mt-2">Dans la fenêtre d’impression : <b>marges « aucune », échelle 100 %, graphiques d’arrière-plan activés</b>. Tout est calculé sur cet appareil, rien n’est envoyé. Document de test : ventes DVF réelles, mise en page à valider.</p></Card>);}
+ :<div className="rounded-xl bg-amber-50 dark:bg-navy-900 border border-amber-300 dark:border-navy-700 p-3 mb-3 text-sm"><b>Avis de valeur indisponible.</b> Il manque : {why}. Lancez le comparatif DVF ci-dessus, puis revenez ici.</div>}
+ <div className="flex flex-wrap gap-2"><Btn primary on={()=>openAvis(d,'print')} cls={ok?'':'opacity-50'}>🖨 Avis de valeur (PDF)</Btn><Btn on={()=>openAvis(d,'view')}>Aperçu</Btn><Btn on={()=>saveAvis(d)}>Télécharger le .html</Btn></div>
+ <p className="text-[11px] opacity-70 mt-2">Dans la fenêtre d’impression : <b>marges « aucune », échelle 100 %, graphiques d’arrière-plan activés</b>. Tout est calculé sur cet appareil, rien n’est envoyé. Document de test : ventes DVF réelles, mise en page à valider. Impression sombre ou grise ? Paramètres › Affichage : la mire d’impression dit si le défaut vient de l’appareil.</p></Card>);}
 
-function Tools({d,setDvf,setLoyer,update}){const [msg,setMsg]=useState('');const txt=fiche(d);
-const copy=async()=>{try{await navigator.clipboard.writeText(txt);setMsg('Fiche copiée dans le presse-papier ✓')}catch(e){const t=document.createElement('textarea');t.value=txt;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();setMsg('Fiche copiée ✓')}};
-const share=async()=>shareFiche(d,setMsg);const _old=async()=>{if(navigator.share){try{await navigator.share({title:'Fiche d’estimation Estimo',text:txt})}catch(e){}}else{copy();setMsg('Partage indisponible sur ce navigateur : fiche copiée.')}};
-const vcf=()=>shareContact(d,setMsg);const _oldv=()=>{const name=([d.client.prenom,d.client.nom].filter(Boolean).join('-')||'client').replace(/[^\p{L}\p{N}-]+/gu,'_');download(name+'.vcf',vcard(d.client),'text/vcard;charset=utf-8');setMsg('VCard générée ✓')};
-return(<><AvisCard d={d}/><DvfPanel d={d} setDvf={setDvf}/><AjustPanel d={d} update={update}/><Card title="Fiche d’estimation"><pre className="whitespace-pre-wrap text-xs bg-white/60 dark:bg-navy-950/60 rounded-xl p-3 max-h-80 overflow-auto" data-testid="fiche">{txt}</pre><div className="flex flex-wrap gap-2 mt-3"><Btn primary on={share}>Partager</Btn><Btn on={copy}>Copier</Btn><Btn on={vcf}>Export VCard (.vcf)</Btn></div>{msg&&<p className="text-sm mt-2 text-emerald-600">{msg}</p>}</Card></>)}
+// Onglet Financier : comparatif, ajustements, puis le document en bas.
+function Tools({d,setDvf,update}){return(<><DvfPanel d={d} setDvf={setDvf}/><AjustPanel d={d} update={update}/><AvisCard d={d}/></>)}
 
 function Editor({d,update,back}){const [tab,setTab]=useState(0);const [drag,setDrag]=useState(0);const sx=useRef(null);const scroller=useRef(null);
 const set=(sec,k)=>(v)=>update(x=>({...x,[sec]:{...x[sec],[k]:v}}));
@@ -268,7 +265,7 @@ const go=(i)=>{setTab(Math.max(0,Math.min(TABS.length-1,i)));window.scrollTo({to
 const ts=(e)=>{const tg=e.target.closest('input,select,textarea,table,pre');if(tg)return;sx.current={x:e.touches[0].clientX,y:e.touches[0].clientY,lock:null}};
 const tm=(e)=>{const s=sx.current;if(!s)return;const dx=e.touches[0].clientX-s.x,dy=e.touches[0].clientY-s.y;if(s.lock==null&&(Math.abs(dx)>8||Math.abs(dy)>8))s.lock=Math.abs(dx)>Math.abs(dy);if(s.lock)setDrag(dx)};
 const te=()=>{const s=sx.current;sx.current=null;if(s&&s.lock){if(drag<-60)go(tab+1);else if(drag>60)go(tab-1)}setDrag(0)};
-const fileRef=useRef(),camRef=useRef();const [busy,setBusy]=useState(false);
+const fileRef=useRef(),camRef=useRef(),multiRef=useRef();const [busy,setBusy]=useState(false);
 const addPhotos=async(files)=>{setBusy(true);const out=[];for(const fl of files){try{const r=await compress(fl);out.push({id:uid(),...r,name:fl.name,at:Date.now()})}catch(e){}}update(x=>({...x,medias:[...x.medias,...out]}));setBusy(false)};
 const panes=[
 <div key="c"><Card title="Type de bien"><div className="flex flex-wrap">{TYPES.map(x=><Chk key={x} v={c.type===x} on={()=>set('client','type')(x)} label={x}/>)}</div></Card>
@@ -283,10 +280,10 @@ const panes=[
 <Card title="Projet de vente"><Field label="Motivation de vente"><Sel v={f.motivation} on={set('financier','motivation')} opts={['Mutation professionnelle','Agrandissement','Réduction de surface','Succession','Divorce / séparation','Investissement','Départ à la retraite','Autre']}/></Field><Field label="Délai souhaité"><Sel v={f.delai} on={set('financier','delai')} opts={['Immédiat','Moins de 3 mois','3 à 6 mois','6 à 12 mois','Pas pressé']}/></Field><Field label="Prix attendu par le vendeur"><Num v={f.prixAttendu} on={set('financier','prixAttendu')} unit="€"/></Field>
 <div className="rounded-2xl bg-navy-800 text-white p-4 text-center" data-testid="prixm2"><p className="text-xs uppercase opacity-80">Prix au m² (automatique)</p><p className="text-3xl font-extrabold">{P&&S?eur(P/S):'—'}</p><p className="text-xs opacity-70">{S?`sur ${S} m² ${n(b.carrez)?'Carrez':'habitables'}`:'Renseignez une surface dans l’onglet Bien'}</p>{A.ok&&A.surface&&P?<p className="text-xs mt-2" data-testid="ecartajuste">Estimation ajustée : {eur(A.m2)}/m² · écart {((P/A.m2-1)*100).toFixed(1).replace('.',',')} %</p>:d.dvf&&d.dvf.median&&P&&S?<p className="text-xs mt-2">Médiane DVF : {eur(d.dvf.median)}/m² · écart {((P/S/d.dvf.median-1)*100).toFixed(1).replace('.',',')} %</p>:null}</div>
 <Field label="Notes"><textarea className="inp mt-3" rows="2" value={f.notes} onChange={e=>set('financier','notes')(e.target.value)}/></Field></Card>
-<Tools d={d} setDvf={(v)=>update(x=>({...x,dvf:v}))} setLoyer={(v)=>update(x=>({...x,loyer:v}))} update={update}/></div>,
+<Tools d={d} setDvf={(v)=>update(x=>({...x,dvf:v}))} update={update}/></div>,
 <div key="l"><LoyerPanel d={d} setLoyer={(v)=>update(x=>({...x,loyer:v}))}/>{!d.dvf&&<p className="text-xs opacity-70 px-1">Astuce : lancez d’abord le comparatif DVF (onglet Financier) pour calculer le rendement sur le prix estimé ; sinon le prix attendu est utilisé.</p>}</div>,
-<div key="m"><Card title="Photos du bien"><p className="text-xs opacity-75 mb-3">Compression automatique à 800 px de large (JPEG).</p><div className="flex gap-2 mb-3"><Btn primary on={()=>camRef.current.click()} cls="flex-1">📷 Prendre une photo</Btn><Btn on={()=>fileRef.current.click()} cls="flex-1">🖼 Galerie</Btn></div>
-<input ref={camRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e=>{addPhotos([...e.target.files]);e.target.value=''}}/><input ref={fileRef} data-testid="gallery" type="file" accept="image/*" multiple className="hidden" onChange={e=>{addPhotos([...e.target.files]);e.target.value=''}}/>
+<div key="m"><Card title="Photos du bien"><p className="text-xs opacity-75 mb-3">Compression automatique à 800 px de large (JPEG).</p><div className="flex gap-2 mb-3"><Btn primary on={()=>camRef.current.click()} cls="flex-1">📷 Prendre une photo</Btn><Btn on={()=>fileRef.current.click()} cls="flex-1">🖼 Galerie</Btn></div><button type="button" onClick={()=>multiRef.current.click()} className="block text-[11px] underline opacity-65 mb-2" data-testid="gallery-plusieurs">Ajouter plusieurs photos d’un coup</button>
+<input ref={camRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e=>{addPhotos([...e.target.files]);e.target.value=''}}/><input ref={fileRef} data-testid="gallery" type="file" accept="image/*" className="hidden" onChange={e=>{addPhotos([...e.target.files]);e.target.value=''}}/><input ref={multiRef} data-testid="gallery-multi" type="file" accept="image/*" multiple className="hidden" onChange={e=>{addPhotos([...e.target.files]);e.target.value=''}}/>
 {busy&&<p className="text-sm">Compression…</p>}{d.medias.length===0&&<p className="text-sm opacity-70">Aucune photo.</p>}
 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">{d.medias.map(m=>(<div key={m.id} className="relative"><img src={m.data} className="rounded-xl w-full aspect-[4/3] object-cover"/><span className="absolute bottom-1 left-1 text-[10px] bg-black/50 text-white rounded px-1">{m.w}×{m.h}</span><button onClick={()=>update(x=>({...x,medias:x.medias.filter(y=>y.id!==m.id)}))} className="absolute top-1 right-1 glass rounded-full w-7 h-7 text-xs">✕</button></div>))}</div></Card></div>];
 return(<div className="min-h-screen pb-28"><header className="sticky top-0 z-20 glass !rounded-none px-3 pb-2" style={{paddingTop:'max(env(safe-area-inset-top),.6rem)'}}><div className="max-w-3xl mx-auto"><div className="flex items-center gap-2 mb-2"><button onClick={back} className="glass glass-btn rounded-full w-10 h-10" aria-label="Accueil">‹</button><Logo size={30}/><div className="flex-1 min-w-0"><p className="font-bold truncate">{[c.prenom,c.nom].filter(Boolean).join(' ')||'Nouveau dossier'}</p><p className="text-xs opacity-70 truncate">{c.type}{S?` · ${S} m²`:''} · enregistré automatiquement</p></div></div>
@@ -317,12 +314,27 @@ return(<Card title="Estimation ajustée">
 <div className="mt-3"><Btn on={()=>setEdit(!edit)}>{edit?'Terminer':'Modifier les coefficients'}</Btn></div>
 </Card>)}
 
-// Paramètres : la sauvegarde est automatique, on n'y vient que pour restaurer ou exporter.
-function Parametres({list,back,restore,backup,snaps,persisted,restoreSnap}){const [msg,setMsg]=useState('');const [smsg,setSmsg]=useState('');const ref=useRef();
+// Paramètres : trois sections — Données, Affichage, Application. La sauvegarde est
+// automatique : on ne vient ici que pour restaurer, exporter ou diagnostiquer un rendu.
+const PARAM_SECS=[['donnees','Données'],['affichage','Affichage'],['application','Application']];
+const THEMES=[['light','Clair'],['dark','Sombre'],['auto','Auto']];
+const MIRE_TEINTES=[['#ffffff','Blanc'],['#000000','Noir'],['#e60012','Rouge'],['#00a04a','Vert'],['#0068b7','Bleu']];
+// Mode sombre force : si le fond « canvas » (declare clair) n'est plus blanc, le navigateur
+// assombrit lui-meme la page. Technique documentee par Chrome pour l'Auto Dark Theme.
+function forceDarkDetect(){try{const el=document.createElement('div');
+ el.style.cssText='position:fixed;left:-9999px;top:0;width:1px;height:1px;background-color:canvas;color-scheme:light';
+ document.body.appendChild(el);const bg=getComputedStyle(el).backgroundColor;el.remove();
+ const m=(bg||'').match(/[0-9.]+/g);if(!m||m.length<3)return null;
+ return !(Number(m[0])>250&&Number(m[1])>250&&Number(m[2])>250)}catch(e){return null}}
+function Parametres({list,back,restore,backup,snaps,persisted,restoreSnap,theme='auto',setTheme,sec:secInit}){const [msg,setMsg]=useState('');const [smsg,setSmsg]=useState('');const [sec,setSec]=useState(secInit||'donnees');const [forced,setForced]=useState(()=>forceDarkDetect());const ref=useRef();
 const used=useMemo(()=>Math.round(new Blob([JSON.stringify(list)]).size/1024),[list]);
 const dt=(t)=>t?new Date(t).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+const go=(k)=>{setSec(k);try{window.scrollTo({top:0,behavior:'smooth'})}catch(e){}};
+const on=(k)=>`flex-1 rounded-xl px-2 py-2 text-[12px] font-semibold whitespace-nowrap ${sec===k?'bg-navy-800 text-white shadow':'opacity-70'}`;
 return(<div className="max-w-3xl mx-auto px-4 pb-24" style={{paddingTop:'max(env(safe-area-inset-top),1rem)'}}>
-<header className="flex items-center gap-3 mb-6"><button onClick={back} className="glass glass-btn rounded-full w-11 h-11 text-lg" aria-label="Retour">←</button><h1 className="text-xl font-extrabold">Paramètres</h1></header>
+<header className="flex items-center gap-3 mb-4"><button onClick={back} className="glass glass-btn rounded-full w-11 h-11 text-lg" aria-label="Retour">←</button><div><h1 className="text-xl font-extrabold">Paramètres</h1><p className="text-[11px] opacity-60">Données · affichage · application</p></div></header>
+<nav className="glass rounded-2xl p-1 flex gap-1 mb-4" role="tablist" aria-label="Sections des paramètres" data-testid="param-nav">{PARAM_SECS.map(([k,l])=><button key={k} role="tab" aria-selected={sec===k} onClick={()=>go(k)} className={on(k)}>{l}</button>)}</nav>
+{sec==='donnees'?<>
 <Card title="Sauvegarde automatique">
 <p className="text-sm opacity-85">Vos dossiers sont copiés automatiquement sur cet appareil après chaque modification. Aucune action de votre part, aucun fichier à télécharger.</p>
 <div className="grid grid-cols-2 gap-2 mt-3 text-sm"><div className="glass rounded-xl p-2"><p className="text-[10px] uppercase opacity-60">Dernière copie</p><p className="font-semibold">{dt(snaps[0]&&snaps[0].at)}</p></div><div className="glass rounded-xl p-2"><p className="text-[10px] uppercase opacity-60">Copies conservées</p><p className="font-semibold">{snaps.length} / {SNAP_MAX}</p></div><div className="glass rounded-xl p-2"><p className="text-[10px] uppercase opacity-60">Dossiers</p><p className="font-semibold">{list.length}</p></div><div className="glass rounded-xl p-2"><p className="text-[10px] uppercase opacity-60">Espace utilisé</p><p className="font-semibold">~{used} Ko</p></div></div>
@@ -337,12 +349,37 @@ return(<div className="max-w-3xl mx-auto px-4 pb-24" style={{paddingTop:'max(env
 {msg?<p className="text-sm font-semibold text-emerald-600 mt-2" data-testid="backupmsg">{msg}</p>:null}
 <p className="text-[11px] opacity-70 mt-2">Une restauration ne supprime jamais un dossier plus récent ; si le stockage est plein, elle est refusée sans rien modifier.</p>
 </Card>
-<Card title="À propos"><p className="text-sm">Estimo v{window.ESTIMO_VERSION||'2.5'} · PWA hors ligne, sans compte ni publicité.</p><p className="text-xs opacity-70 mt-1">Comparatif DVF Etalab · ventes jusqu’au {fmtDate(EstimoDVF.DATA_CUTOFF)}. Estimation indicative, non contractuelle.</p></Card>
+</>:null}
+{sec==='affichage'?<>
+<Card title="Thème">
+<p className="text-sm opacity-85">Confort de lecture, sur le terrain comme au bureau. Le document imprimé reste blanc dans tous les cas.</p>
+<div className="glass rounded-2xl p-1 flex gap-1 mt-3" role="group" aria-label="Thème de l’application" data-testid="theme">{THEMES.map(([k,l])=><button key={k} onClick={()=>setTheme&&setTheme(k)} aria-pressed={theme===k} className={`flex-1 rounded-xl px-2 py-2 text-[12px] font-semibold ${theme===k?'bg-navy-800 text-white shadow':'opacity-70'}`}>{l}</button>)}</div>
+<p className="text-[11px] opacity-70 mt-2">« Auto » suit le réglage jour / nuit de l’appareil.</p>
+</Card>
+<Card title="Diagnostic d’impression">
+<p className="text-sm opacity-85">Si un document sort sombre ou gris, cette page témoin dit en un feuillet si le défaut vient du document ou de l’appareil. Elle ne contient que du blanc et des teintes vives.</p>
+<div className="glass rounded-xl p-3 mt-3 text-xs" data-testid="forcage">{forced===true?<p><b>⚠️ Assombrissement forcé détecté sur cet appareil.</b> Le navigateur assombrit lui-même cette page : l’écran peut paraître sombre, les couleurs éteintes. Ce n’est pas Estimo.</p>:forced===false?<p className="opacity-80">✓ Aucun assombrissement forcé détecté sur cet appareil.</p>:<p className="opacity-80">Détection non disponible sur ce navigateur : servez-vous de la mire pour trancher.</p>}</div>
+<div className="flex gap-1 mt-3" aria-hidden="true">{MIRE_TEINTES.map(([c,n])=><div key={n} className="flex-1"><div style={{background:c,height:'26px',border:'1px solid #cfd8e4',borderRadius:'6px'}}></div><p className="text-[9px] text-center mt-1 opacity-60">{n}</p></div>)}</div>
+<div className="flex flex-wrap gap-2 mt-3"><Btn primary on={openMire}>🖨 Imprimer la mire (1 page A4)</Btn></div>
+<p className="text-xs mt-3"><b>Blanche et colorée</b> : l’appareil et l’imprimante sont corrects, le défaut vient du document.</p>
+<p className="text-xs mt-1"><b>Sombre, grise ou couleurs éteintes</b> : un mode sombre forcé assombrit l’écran. Ce n’est pas Estimo.</p>
+<div className="glass rounded-xl p-3 mt-3 text-[11px] opacity-85"><p className="font-semibold mb-1">Le désactiver</p><p><b>Android</b> : Paramètres › Affichage › Mode sombre. <b>Chrome</b> : menu ⋮ › Paramètres › Thème › Clair, puis chrome://flags › Auto Dark Mode for Web Contents › Disabled. <b>Samsung Internet</b> : ☰ › Paramètres › Apparence, décocher « mode sombre pour les sites web ».</p><p className="mt-1"><b>iPhone</b> : ce forçage n’existe pas dans Safari ; si la mire sort sombre, c’est l’imprimante ou le document.</p></div>
+</Card>
+</>:null}
+{sec==='application'?<>
+<Card title="Version">
+<div className="grid grid-cols-2 gap-2 text-sm"><div className="glass rounded-xl p-2"><p className="text-[10px] uppercase opacity-60">Version</p><p className="font-semibold" data-testid="version">v{window.ESTIMO_VERSION||'2.5'}</p></div><div className="glass rounded-xl p-2"><p className="text-[10px] uppercase opacity-60">Ventes DVF</p><p className="font-semibold">jusqu’au {fmtDate(EstimoDVF.DATA_CUTOFF)}</p></div></div>
+<p className="text-xs opacity-70 mt-3">PWA hors ligne, sans compte ni publicité. Les mises à jour arrivent seules : une bannière « Recharger » apparaît quand une nouvelle version est prête.</p>
+</Card>
+<Card title="À propos"><p className="text-sm">Comparatif DVF Etalab · estimation indicative, non contractuelle.</p><p className="text-xs opacity-70 mt-1">Tout est calculé sur cet appareil : aucun dossier, aucune photo, aucune donnée client n’est envoyé.</p></Card>
+</>:null}
 </div>)}
 
-function App(){const [list,setList]=useState(load);const [cur,setCur]=useState(null);const [page,setPage]=useState('accueil');const [snap,setSnap]=useState(null);const [snaps,setSnaps]=useState([]);const [persisted,setPersisted]=useState(null);const [dark,setDark]=useState(()=>localStorage.getItem(THEME)?localStorage.getItem(THEME)==='dark':matchMedia('(prefers-color-scheme: dark)').matches);
-useEffect(()=>{document.documentElement.classList.toggle('dark',dark);localStorage.setItem(THEME,dark?'dark':'light');document.querySelector('meta[name=theme-color]').content=dark?'#061226':'#0b1f3a'},[dark]);
-useEffect(()=>{const h=()=>{const hs=location.hash;if(hs.startsWith('#/d/')){setCur(decodeURIComponent(hs.replace(/^#\/d\//,'')));setPage('dossier')}else if(hs==='#/parametres'){setCur(null);setPage('parametres')}else{setCur(null);setPage('accueil')}};h();addEventListener('hashchange',h);return()=>removeEventListener('hashchange',h)},[]);
+function App(){const [list,setList]=useState(load);const [cur,setCur]=useState(null);const [page,setPage]=useState('accueil');const [snap,setSnap]=useState(null);const [snaps,setSnaps]=useState([]);const [persisted,setPersisted]=useState(null);const [theme,setTheme]=useState(()=>{const v=localStorage.getItem(THEME);return v==='dark'||v==='light'?v:'auto'});const [sysDark,setSysDark]=useState(()=>matchMedia('(prefers-color-scheme: dark)').matches);
+const dark=theme==='auto'?sysDark:theme==='dark';
+useEffect(()=>{const mq=matchMedia('(prefers-color-scheme: dark)');const f=()=>setSysDark(mq.matches);if(mq.addEventListener)mq.addEventListener('change',f);else if(mq.addListener)mq.addListener(f);return()=>{if(mq.removeEventListener)mq.removeEventListener('change',f);else if(mq.removeListener)mq.removeListener(f)}},[]);
+useEffect(()=>{document.documentElement.classList.toggle('dark',dark);localStorage.setItem(THEME,theme);document.querySelector('meta[name=theme-color]').content=dark?'#061226':'#0b1f3a'},[dark,theme]);
+useEffect(()=>{const h=()=>{const hs=location.hash;if(hs.startsWith('#/d/')){setCur(decodeURIComponent(hs.replace(/^#\/d\//,'')));setPage('dossier')}else if(hs==='#/parametres'||hs.indexOf('#/parametres/')===0){setCur(null);setPage('parametres')}else{setCur(null);setPage('accueil')}};h();addEventListener('hashchange',h);return()=>removeEventListener('hashchange',h)},[]);
 // Sauvegarde automatique : instantanés silencieux, rien n'est demandé à l'utilisateur.
 const refreshSnaps=async()=>{try{const s=await listSnapshots();setSnaps(s);setSnap(s[0]||null)}catch(e){}};
 useEffect(()=>{requestPersist().then(p=>setPersisted(p.persisted)).catch(()=>{});refreshSnaps()},[]);
@@ -358,8 +395,8 @@ const restoreSnap=async(id)=>{try{const s=await getSnapshot(id);if(!s)return 'Co
 const open=(id)=>{location.hash='#/d/'+id};const back=()=>{location.hash=''};
 const create=()=>{const d=blank();commit([...list,d]);open(d.id)};
 const d=list.find(x=>x.id===cur);const update=(fn)=>setList(l=>{const nl=l.map(x=>x.id===cur?{...fn(x),updated:Date.now()}:x);save(nl);return nl});
-if(page==='parametres')return <Parametres list={list} back={back} restore={restore} backup={backup} snaps={snaps} persisted={persisted} restoreSnap={restoreSnap}/>;
-return d?<Editor key={d.id} d={d} update={update} back={back}/>:<Home list={list} open={open} create={create} del={(id)=>commit(list.filter(x=>x.id!==id))} dark={dark} setDark={setDark} parametres={()=>{location.hash='#/parametres'}} snap={snap}/>}
+if(page==='parametres')return <Parametres list={list} back={back} restore={restore} backup={backup} snaps={snaps} persisted={persisted} restoreSnap={restoreSnap} theme={theme} setTheme={setTheme} sec={(location.hash.split('/')[2])||undefined}/>;
+return d?<Editor key={d.id} d={d} update={update} back={back}/>:<Home list={list} open={open} create={create} del={(id)=>commit(list.filter(x=>x.id!==id))} dark={dark} setDark={(v)=>setTheme(v?'dark':'light')} parametres={()=>{location.hash='#/parametres'}} snap={snap}/>}
 
 // Filet de sécurité : une erreur de rendu ne doit pas laisser un écran blanc devant un client.
 class ErrorBoundary extends React.Component{constructor(p){super(p);this.state={err:null}}
@@ -384,7 +421,7 @@ if('serviceWorker' in navigator)addEventListener('load',async()=>{try{
 // La version affichée doit être la version servie : si le serveur publie plus récent, on recharge une fois.
 addEventListener('load',async()=>{try{const t=await (await fetch('sw.js',{cache:'no-store'})).text();const m=t.match(/estimo-v([0-9.]+)/);const srv=m&&m[1];
  if(srv&&srv!==window.ESTIMO_VERSION&&sessionStorage.getItem('estimo-sync')!==srv){sessionStorage.setItem('estimo-sync',srv);location.replace(location.pathname+'?v='+srv+(location.hash||''))}}catch(e){}});
-window.ESTIMO_VERSION='2.5.3';
+window.ESTIMO_VERSION='2.5.5';
 </script>
 </body>
 </html>

@@ -64,6 +64,8 @@ const stubs = {
   Blob, URL, addEventListener: noop, removeEventListener: noop, setInterval: noop, clearInterval: noop, console,
 };
 
+// L app appelle window.addEventListener au chargement (afterprint) : window est globalThis ici.
+globalThis.addEventListener = noop; globalThis.removeEventListener = noop; globalThis.matchMedia = stubs.matchMedia; globalThis.scrollTo = noop;
 const names = ['Home', 'Parametres', 'AjustPanel', 'Editor', 'App', 'blank', 'computeAjust', 'fiche'];
 new Function('window', 'document', 'Blob', 'URL', moteur)(globalThis, stubs.document, Blob, URL);
 const src = compiled + '\n;globalThis.__E={' + names.join(',') + '};';
@@ -121,19 +123,39 @@ check('AjustPanel : plafond global annoncé quand il mord', () => {
   has(E.AjustPanel({ d, update: noop }), '-20,0 %');
 });
 
-check('Parametres : sauvegarde automatique, aucune copie', () => {
-  has(E.Parametres({ list: [], back: noop, restore: noop, backup: noop, snaps: [], persisted: false, restoreSnap: noop }),
-    'Sauvegarde automatique', 'Aucune action de votre part', 'Stockage non protégé', 'Restaurer depuis un fichier');
+check('Parametres : trois sections, sauvegarde automatique dans Donnees', () => {
+  has(E.Parametres({ list: [], back: noop, restore: noop, backup: noop, snaps: [], persisted: false, restoreSnap: noop, theme: 'auto', setTheme: noop }),
+    'Donn\u00e9es', 'Affichage', 'Application', 'Sauvegarde automatique', 'Aucune action de votre part', 'Stockage non prot\u00e9g\u00e9', 'Restaurer depuis un fichier');
 });
 
-check('Parametres : copies listées, stockage protégé', () => {
+check('Parametres : copies list\u00e9es, stockage prot\u00e9g\u00e9', () => {
   has(E.Parametres({ list: [mkDos()], back: noop, restore: noop, backup: noop, snaps: [{ id: 's1', at: Date.now(), nb: 1, stripped: false }], persisted: true, restoreSnap: noop }),
-    'Stockage protégé', 'Revenir à une copie', 'Exporter les 1 dossier(s)');
+    'Stockage prot\u00e9g\u00e9', 'Revenir \u00e0 une copie', 'Exporter les 1 dossier(s)');
+});
+
+check('Parametres > Affichage : la mire d impression et le theme', () => {
+  has(E.Parametres({ list: [], back: noop, restore: noop, backup: noop, snaps: [], persisted: true, restoreSnap: noop, sec: 'affichage' }),
+    'Th\u00e8me', 'Clair', 'Sombre', 'Auto', 'Diagnostic d\u2019impression', 'Imprimer la mire', 'Blanche et color\u00e9e');
+});
+
+check('Parametres > Application : version et source des donn\u00e9es', () => {
+  has(E.Parametres({ list: [], back: noop, restore: noop, backup: noop, snaps: [], persisted: true, restoreSnap: noop, sec: 'application' }),
+    'Version', '2.5.', '31/12/2025', '\u00c0 propos');
 });
 
 check('Editor : l’onglet Financier affiche l’écart sur l’estimation ajustée', () => {
   const d = mkDos({ dvf: DVFILE, financier: { ...E.blank().financier, prixAttendu: '300000' } });
   has(E.Editor({ d, update: noop, back: noop }), 'Estimation ajustée', 'Prix au m² (automatique)');
+});
+
+check('Editor : plus de carte Fiche d\u2019estimation dans Financier, avis de valeur en bas', () => {
+  const t = render(E.Editor({ d: mkDos({ dvf: DVFILE }), update: noop, back: noop }));
+  if (t.includes('Fiche d\u2019estimation')) throw new Error('la carte redondante est encore rendue');
+  const iDvf = t.indexOf('Comparatif DVF');
+  const iAvis = t.indexOf('Avis de valeur');
+  if (iDvf < 0 || iAvis < 0) throw new Error('comparatif ou avis absent du rendu');
+  if (!(iDvf < iAvis)) throw new Error('l\u2019avis de valeur doit venir apres le comparatif');
+  if (!t.includes('Charges et fiscalit\u00e9')) throw new Error('onglet Financier incomplet');
 });
 
 console.log('\n' + ok + ' contrôle(s) de rendu OK' + (fails.length ? ', ' + fails.length + ' échec(s)' : ''));
