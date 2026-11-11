@@ -1,8 +1,8 @@
 // Génère index.html (fichier unique) en injectant les modules testés
-// (js/dvf.js, js/loyers.js, js/ajust.js, js/snap.js, js/pdfdoc.js) dans src/app.template.html.
+// (js/dvf.js, js/loyers.js, js/ajust.js, js/snap.js, js/profil.js, js/pdfdoc.js) dans src/app.template.html.
 import fs from 'node:fs';
 const root = new URL('..', import.meta.url).pathname;
-const MODULES = ['js/dvf.js', 'js/loyers.js', 'js/ajust.js', 'js/snap.js', 'js/pdfdoc.js'];
+const MODULES = ['js/dvf.js', 'js/loyers.js', 'js/ajust.js', 'js/snap.js', 'js/profil.js', 'js/pdfdoc.js'];
 const SUBS = [
   ["new URL('../data/dvf/', import.meta.url).href", "new URL('data/dvf/', document.baseURI).href"],
   ["new URL('../data/loyers/', import.meta.url).href", "new URL('data/loyers/', document.baseURI).href"],

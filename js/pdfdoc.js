@@ -6,13 +6,18 @@
 // Les rubriques qu'aucune donnée ne peut alimenter sont affichées comme telles, jamais remplies au hasard.
 
 export const AGENCE_DEFAUT = {
-  // Aucune identité réelle en dur : la marque, la carte professionnelle, la garantie
-  // financière, l'assurance et le médiateur ne sont pas tranchés (cf. § 18 du texte type).
-  // L'app peut injecter un bloc d'agence via buildAvis(dossier, { agence: {...} }).
+  // Aucune identité réelle en dur : ni marque, ni carte professionnelle, ni garantie
+  // financière, ni assurance, ni médiateur. Ces valeurs viennent du profil saisi par
+  // l'utilisateur (js/profil.js) via buildAvis(dossier, { agence: {...} }).
+  // Un champ absent reste null : le document affiche alors son « à compléter ».
   nom: null, adresse: null, tel: null, mail: null, site: null,
-  raison: null, forme: null, capital: null, rcs: null, tva: null,
-  carte: null, garantie: null, assurance: null, mediateur: null,
-  agent: null, fonction: null, rsac: null, secteur: null,
+  activites: null, horaires: null,
+  raison: null, forme: null, capital: null,
+  rcs: null, rcsVille: null, rcsNum: null, tva: null,
+  carte: null, carteType: null, carteNum: null, carteAutorite: null,
+  garantie: null, assurance: null, mediateur: null,
+  agent: null, fonction: null, mobile: null, mailAgent: null,
+  rsac: null, rsacVille: null, rsacNum: null, secteur: null, anciennete: null,
 };
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -38,6 +43,9 @@ export function renderAvis(data) {
   const ph = (label, tag = 'AGENCE') => `<span class="ph">${esc(label)} <b>${tag}</b></span>`;
   const na = (label) => `<span class="na">${esc(label)}</span>`;
   const ou = (v) => (isSet(v) && String(v).trim() !== '' ? esc(v) : `<span class="ph">à compléter <b>AGENCE</b></span>`);
+  // Ajoute « , forme » / « , capital de X » seulement si le champ est renseigné :
+  // une phrase légale ne doit pas contenir de virgule orpheline.
+  const suf = (v, prefixe) => (isSet(v) && String(v).trim() !== '' ? esc(prefixe + v) : '');
 
   // --- Petits composants -----------------------------------------------------
   const page = (num, kicker, title, body, opts = {}) => `
@@ -244,17 +252,17 @@ export function renderAvis(data) {
         <p class="card-t">Votre agence</p>
         <p class="lead">${ou(AGENCE.nom)}</p>
         <p>${ou(AGENCE.adresse)}</p>
-        <p class="mt">${ph('téléphone', 'AGENCE')} · ${ph('courriel', 'AGENCE')}<br>${ph('site internet', 'AGENCE')}</p>
-        <p class="mt"><b>Activités :</b> ${ph('transaction, location, gestion, neuf', 'AGENCE')}</p>
-        <p><b>Horaires :</b> ${ph('jours et heures', 'AGENCE')}</p>
+        <p class="mt">${ou(AGENCE.tel)} · ${ou(AGENCE.mail)}<br>${ou(AGENCE.site)}</p>
+        <p class="mt"><b>Activités :</b> ${ou(AGENCE.activites)}</p>
+        <p><b>Horaires :</b> ${ou(AGENCE.horaires)}</p>
       </div>
       <div class="card">
         <p class="card-t">Votre conseiller</p>
         <p class="lead">${ou(AGENCE.agent)}</p>
         <p>${ou(AGENCE.fonction)}</p>
-        <p class="mt">${ph('téléphone mobile', 'AGENCE')} · ${ph('courriel', 'AGENCE')}</p>
+        <p class="mt">${ou(AGENCE.mobile)} · ${ou(AGENCE.mailAgent)}</p>
         <p class="mt"><b>Secteur d'intervention :</b> ${ou(AGENCE.secteur)}</p>
-        <p><b>Ancienneté dans le secteur :</b> ${ph('nombre d\'années', 'AGENCE')}</p>
+        <p><b>Ancienneté dans le secteur :</b> ${ou(AGENCE.anciennete)}</p>
       </div>
     </div>
     <div class="note">
@@ -655,13 +663,13 @@ export function renderAvis(data) {
       <p>Aucune des informations d'entreprise ci-dessous n'est renseignée : raison sociale, RCS, TVA, carte professionnelle, garantie financière, assurance, médiateur. Je ne les ai pas et je ne les inventerai pas. <b>[JURISTE]</b> <b>[AGENCE]</b></p>
     </div>
     <p class="card-t mt">Éditeur du document</p>
-    <p class="legal">${ph('raison sociale, forme juridique, capital', 'AGENCE')}, dont le siège social est ${ou(AGENCE.adresse)}, immatriculée au RCS de ${ph('ville', 'AGENCE')} sous le numéro ${ph('numéro', 'AGENCE')}, numéro de TVA intracommunautaire ${ph('numéro', 'AGENCE')}.<br>
-    Carte professionnelle ${ph('transaction / gestion', 'AGENCE')} n° ${ph('numéro', 'AGENCE')}, délivrée par ${ph('autorité', 'AGENCE')}.<br>
-    Garantie financière : ${ph('organisme, adresse', 'AGENCE')}. Assurance responsabilité civile professionnelle : ${ph('assureur, police', 'AGENCE')}.<br>
-    Médiateur de la consommation : ${ph('nom, adresse, site', 'AGENCE')}.</p>
+    <p class="legal">${ou(AGENCE.raison)}${suf(AGENCE.forme, ', ')}${suf(AGENCE.capital, ', au capital de ')}, dont le siège social est ${ou(AGENCE.adresse)}, immatriculée au RCS de ${ou(AGENCE.rcsVille)} sous le numéro ${ou(AGENCE.rcsNum)}, numéro de TVA intracommunautaire ${ou(AGENCE.tva)}.<br>
+    Carte professionnelle ${ou(AGENCE.carteType)} n° ${ou(AGENCE.carteNum)}, délivrée par ${ou(AGENCE.carteAutorite)}.<br>
+    Garantie financière : ${ou(AGENCE.garantie)}. Assurance responsabilité civile professionnelle : ${ou(AGENCE.assurance)}.<br>
+    Médiateur de la consommation : ${ou(AGENCE.mediateur)}.</p>
 
     <p class="card-t mt">Rédacteur du document</p>
-    <p class="legal">${ou(AGENCE.agent)}, ${ou(AGENCE.fonction)}, immatriculé au registre spécial des agents commerciaux de ${ph('ville', 'AGENCE')} sous le numéro ${ph('numéro', 'AGENCE')}, mandataire de ${ph('raison sociale', 'AGENCE')}.</p>
+    <p class="legal">${ou(AGENCE.agent)}, ${ou(AGENCE.fonction)}, immatriculé au registre spécial des agents commerciaux de ${ou(AGENCE.rsacVille)} sous le numéro ${ou(AGENCE.rsacNum)}, mandataire de ${ou(AGENCE.raison)}.</p>
 
     <p class="card-t mt">Nature du document</p>
     <p class="legal">Avis de valeur établi à la demande de ${esc(nom)}, à titre d'information et sans caractère contractuel. Il ne constitue pas une expertise immobilière, ni un mandat de vente, ni une promesse synallagmatique de vente. Il ne peut être utilisé comme base de négociation avec un tiers sans l'accord écrit de son auteur.</p>

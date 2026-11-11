@@ -21,10 +21,14 @@ const pct=(x)=>x==null?'—':(x*100).toFixed(2).replace('.',',')+' %';
 const ajPct=(x)=>x==null?'—':(x>=0?'+':'')+(x*100).toFixed(1).replace('.',',')+' %';
 const fmtDate=(t)=>new Date(t).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'});
 const surfRef=(d)=>n(d.bien.carrez)||n(d.bien.habitable);
+// Le profil vient de l'app (localStorage) : ici il est injecté, vide par défaut.
+let __agence={};
+const agenceDoc=()=>__agence;
+const __setAgence=(a)=>{__agence=a||{}};
 `;
-const code = aj + HELPERS + ficheSrc + '\nexport { fiche, eur, ajPct };';
+const code = aj + HELPERS + ficheSrc + '\nexport { fiche, eur, ajPct, __setAgence };';
 const mod = await import('data:text/javascript;base64,' + Buffer.from(code).toString('base64'));
-const { fiche, eur, ajPct } = mod;
+const { fiche, eur, ajPct, __setAgence } = mod;
 
 const DVF = { type: 'appartement', n: 24, median: 4200, q1: 3800, q3: 4700, radius: 300, since: '2023-11-10', lastSale: '2025-12-31', source: 'DVF Etalab', fallback: false, comps: [] };
 const base = (o = {}) => ({
@@ -32,6 +36,19 @@ const base = (o = {}) => ({
   bien: { carrez: '65', habitable: '', etage: '4', terrasse: '12', vue: 'Mer', exposure: '' },
   technique: { dpe: 'G' }, financier: { prixAttendu: '' }, medias: [], dvf: null, loyer: null, ajust: {},
   ...o,
+});
+
+test('fiche : le bloc interlocuteur vient du profil, ou n’apparaît pas', () => {
+  __setAgence({});
+  assert.ok(!fiche(base()).includes('VOTRE INTERLOCUTEUR'), 'sans profil : aucun bloc inventé');
+  __setAgence({ agent: 'Marc Fontalirand', fonction: 'agent commercial', nom: 'Laforêt Le Cannet', mobile: '06 00 00 00 00', tel: '04 93 00 00 00', mail: null, mailAgent: null });
+  const txt = fiche(base());
+  assert.ok(txt.includes('VOTRE INTERLOCUTEUR'));
+  assert.ok(txt.includes('Marc Fontalirand — agent commercial'));
+  assert.ok(txt.includes('Laforêt Le Cannet'));
+  assert.ok(txt.includes('06 00 00 00 00'), 'le mobile du conseiller est préféré au fixe');
+  assert.ok(!txt.includes('undefined'));
+  __setAgence({});
 });
 
 test('fiche sans comparatif DVF : pas de bloc estimation ajustée', () => {

@@ -6,10 +6,10 @@ const ROOT = new URL('../', import.meta.url).pathname;
 const app = readFileSync(ROOT + 'index.html', 'utf8');
 const param = app.slice(app.indexOf('function Parametres('), app.indexOf('function App(){'));
 
-test('paramètres : trois sections rangées, plus une seule page en vrac', () => {
-  assert.match(app, /const PARAM_SECS=\[\[.donnees.,.Données.\],\[.affichage.,.Affichage.\],\[.application.,.Application.\]\]/);
+test('paramètres : quatre sections rangées, plus une seule page en vrac', () => {
+  assert.match(app, /const PARAM_SECS=\[\[.profil.,.Profil.\],\[.donnees.,.Données.\],\[.affichage.,.Affichage.\],\[.application.,.Application.\]\]/);
   assert.match(param, /data-testid="param-nav"/);
-  for (const s of ["sec==='donnees'", "sec==='affichage'", "sec==='application'"]) assert.ok(param.includes(s), s);
+  for (const s of ["sec==='profil'", "sec==='donnees'", "sec==='affichage'", "sec==='application'"]) assert.ok(param.includes(s), s);
   // La sauvegarde automatique et les fichiers restent dans Données.
   assert.match(param, /Card title="Sauvegarde automatique"/);
   assert.match(param, /Card title="Fichier de sauvegarde"/);
@@ -53,7 +53,9 @@ test('paramètres : la détection du mode sombre forcé est dans Affichage', () 
 });
 
 test('détection : assombri, normal, ou non testable', () => {
-  const src = app.slice(app.indexOf('// Mode sombre force'), app.indexOf('function Parametres('));
+  // La tranche s'arrête au premier composant qui suit la détection, sans dépendre de son nom.
+  const fin = ['function ProfilPanel(', 'function Parametres('].map((x) => app.indexOf(x)).filter((x) => x > 0).sort((a, b) => a - b)[0];
+  const src = app.slice(app.indexOf('// Mode sombre force'), fin);
   const evalWith = (bg) => {
     const el = { style: {}, remove() {} };
     const doc = { createElement: () => el, body: { appendChild() {} } };

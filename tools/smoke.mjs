@@ -23,7 +23,7 @@ const compiled = Babel.transform(jsx, { presets: ['react'] }).code;
 let moteur = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((x) => x[1]).filter((c) => c.includes('function computeAjust')).join('\n');
 if (!moteur) throw new Error('moteur injecté introuvable dans index.html');
 // Le moteur est exécuté dans sa propre portée : on en expose les fonctions à l'app.
-moteur += ';globalThis.__M={computeAjust,ajustCtx,RULES,CAP_TOTAL,CAP_COEF,CAP_MANUEL,putSnapshot,listSnapshots,getSnapshot,requestPersist,SNAP_MAX};Object.assign(globalThis,globalThis.__M);';
+moteur += ';globalThis.__M={computeAjust,ajustCtx,RULES,CAP_TOTAL,CAP_COEF,CAP_MANUEL,putSnapshot,listSnapshots,getSnapshot,requestPersist,SNAP_MAX,profilVide,PROFIL_GROUPES,PROFIL_CHAMPS,PROFIL_CLES,completude,resumeProfil,profilAgence,nettoyerProfil,deverser,envelopper};Object.assign(globalThis,globalThis.__M);';
 
 // ---- React factice ----
 let elCount = 0;
@@ -66,7 +66,7 @@ const stubs = {
 
 // L app appelle window.addEventListener au chargement (afterprint) : window est globalThis ici.
 globalThis.addEventListener = noop; globalThis.removeEventListener = noop; globalThis.matchMedia = stubs.matchMedia; globalThis.scrollTo = noop;
-const names = ['Home', 'Parametres', 'AjustPanel', 'Editor', 'App', 'blank', 'computeAjust', 'fiche'];
+const names = ['Home', 'Parametres', 'ProfilPanel', 'AjustPanel', 'Editor', 'App', 'blank', 'computeAjust', 'fiche', 'profilVide', 'PROFIL_CHAMPS', 'completude', 'loadProfil', 'saveProfil', 'agenceDoc'];
 new Function('window', 'document', 'Blob', 'URL', moteur)(globalThis, stubs.document, Blob, URL);
 const src = compiled + '\n;globalThis.__E={' + names.join(',') + '};';
 stubs.window = globalThis;
@@ -124,9 +124,36 @@ check('AjustPanel : plafond global annoncé quand il mord', () => {
   has(E.AjustPanel({ d, update: noop }), '-20,0 %');
 });
 
-check('Parametres : trois sections, sauvegarde automatique dans Donnees', () => {
-  has(E.Parametres({ list: [], back: noop, restore: noop, backup: noop, snaps: [], persisted: false, restoreSnap: noop, theme: 'auto', setTheme: noop }),
-    'Donn\u00e9es', 'Affichage', 'Application', 'Sauvegarde automatique', 'Aucune action de votre part', 'Stockage non prot\u00e9g\u00e9', 'Restaurer depuis un fichier');
+check('Parametres : quatre sections, sauvegarde automatique dans Donnees', () => {
+  has(E.Parametres({ list: [], back: noop, restore: noop, backup: noop, snaps: [], persisted: false, restoreSnap: noop, theme: 'auto', setTheme: noop, sec: 'donnees' }),
+    'Profil', 'Donn\u00e9es', 'Affichage', 'Application', 'Sauvegarde automatique', 'Aucune action de votre part', 'Stockage non prot\u00e9g\u00e9', 'Restaurer depuis un fichier');
+});
+
+check('Parametres > Profil : saisie vide, avancement et champs obligatoires', () => {
+  const t = has(E.Parametres({ list: [], back: noop, restore: noop, backup: noop, snaps: [], persisted: true, restoreSnap: noop, theme: 'auto', setTheme: noop, profil: E.profilVide(), setProfil: noop, sec: 'profil' }),
+    'Identit\u00e9 sur le document', 'Nom de l\u2019agence', 'Nom du conseiller', 'Mentions l\u00e9gales',
+    'M\u00e9diateur de la consommation', 'Vider les champs');
+  if (!/\d+ \/ \d+ champs obligatoires/.test(t)) throw new Error('avancement absent : ' + t.slice(0, 400));
+  if (t.includes('Tous les champs obligatoires sont remplis')) throw new Error('profil vide annonc\u00e9 complet');
+});
+
+check('Profil : enregistré sur l appareil, relu net, et traduit pour le document', () => {
+  E.saveProfil({ nom: 'Laforêt Le Cannet  ', agent: 'Marc Fontalirand', mediateur: '', pirate: 'x' });
+  const p = E.loadProfil();
+  if (p.nom !== 'Laforêt Le Cannet') throw new Error('nom non relu : ' + JSON.stringify(p));
+  if ('pirate' in p) throw new Error('champ inconnu conservé');
+  const a = E.agenceDoc();
+  if (a.nom !== 'Laforêt Le Cannet' || a.agent !== 'Marc Fontalirand') throw new Error('bloc agence faux : ' + JSON.stringify(a));
+  if (a.mediateur !== null) throw new Error('un champ vide doit sortir en null, pas en chaîne');
+  E.saveProfil(E.profilVide());
+});
+
+check('Parametres > Profil : profil complet annonc\u00e9 complet, valeurs affich\u00e9es', () => {
+  const plein = E.profilVide();
+  for (const f of E.PROFIL_CHAMPS) if (f.req) plein[f.k] = 'x';
+  plein.agent = 'Marc Fontalirand'; plein.nom = 'Lafor\u00eat Le Cannet';
+  has(E.Parametres({ list: [], back: noop, restore: noop, backup: noop, snaps: [], persisted: true, restoreSnap: noop, theme: 'auto', setTheme: noop, profil: plein, setProfil: noop, sec: 'profil' }),
+    'Tous les champs obligatoires sont remplis', 'Marc Fontalirand \u00b7 Lafor\u00eat Le Cannet');
 });
 
 check('Parametres : copies list\u00e9es, stockage prot\u00e9g\u00e9', () => {
@@ -141,7 +168,7 @@ check('Parametres > Affichage : la mire d impression et le theme', () => {
 
 check('Parametres > Application : version et source des donn\u00e9es', () => {
   has(E.Parametres({ list: [], back: noop, restore: noop, backup: noop, snaps: [], persisted: true, restoreSnap: noop, sec: 'application' }),
-    'Version', '2.5.', '31/12/2025', '\u00c0 propos');
+    'Version', '2.6.', '31/12/2025', '\u00c0 propos');
 });
 
 check('Editor : l’onglet Financier affiche l’écart sur l’estimation ajustée', () => {
