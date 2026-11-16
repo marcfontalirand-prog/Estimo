@@ -1,7 +1,7 @@
 // Module DVF — prix/m² à proximité. Source principale : fichiers Etalab geo-dvf précalculés en JSON par commune
 // (data/dvf/<dep>/, servis par le site lui-même, cf. tools/build-dvf.py). Repli : API Cerema « DVF open data » (CORS ouvert).
 // Logique pure (filtres, médiane, IQR) testable sous Node ; fonctions réseau isolées.
-export const GEOCODE_URL = 'https://api-adresse.data.gouv.fr/search/';
+export const GEOCODE_URL = 'https://data.geopf.fr/geocodage/search';
 export const LOCAL_BASE = new URL('../data/dvf/', import.meta.url).href;
 export const SOURCE_LABEL = 'DVF Etalab (geo-dvf)';
 // Date de la vente la plus récente publiée dans data/dvf/ — réécrite par tools/build-dvf.py.

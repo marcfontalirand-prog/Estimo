@@ -538,7 +538,7 @@ if('serviceWorker' in navigator)addEventListener('load',async()=>{try{
 // La version affichée doit être la version servie : si le serveur publie plus récent, on recharge une fois.
 addEventListener('load',async()=>{try{const t=await (await fetch('sw.js',{cache:'no-store'})).text();const m=t.match(/estimo-v([0-9.]+)/);const srv=m&&m[1];
  if(srv&&srv!==window.ESTIMO_VERSION&&sessionStorage.getItem('estimo-sync')!==srv){sessionStorage.setItem('estimo-sync',srv);location.replace(location.pathname+'?v='+srv+(location.hash||''))}}catch(e){}});
-window.ESTIMO_VERSION='2.7.0';
+window.ESTIMO_VERSION='2.7.1';
 </script>
 </body>
 </html>

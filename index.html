@@ -55,7 +55,7 @@ html.printing #print-bar{display:flex;position:fixed;top:0;left:0;right:0;z-inde
 // Module DVF — prix/m² à proximité. Source principale : fichiers Etalab geo-dvf précalculés en JSON par commune
 // (data/dvf/<dep>/, servis par le site lui-même, cf. tools/build-dvf.py). Repli : API Cerema « DVF open data » (CORS ouvert).
 // Logique pure (filtres, médiane, IQR) testable sous Node ; fonctions réseau isolées.
-const GEOCODE_URL = 'https://api-adresse.data.gouv.fr/search/';
+const GEOCODE_URL = 'https://data.geopf.fr/geocodage/search';
 const LOCAL_BASE = new URL('data/dvf/', document.baseURI).href;
 const SOURCE_LABEL = 'DVF Etalab (geo-dvf)';
 // Date de la vente la plus récente publiée dans data/dvf/ — réécrite par tools/build-dvf.py.
@@ -2181,7 +2181,7 @@ if('serviceWorker' in navigator)addEventListener('load',async()=>{try{
 // La version affichée doit être la version servie : si le serveur publie plus récent, on recharge une fois.
 addEventListener('load',async()=>{try{const t=await (await fetch('sw.js',{cache:'no-store'})).text();const m=t.match(/estimo-v([0-9.]+)/);const srv=m&&m[1];
  if(srv&&srv!==window.ESTIMO_VERSION&&sessionStorage.getItem('estimo-sync')!==srv){sessionStorage.setItem('estimo-sync',srv);location.replace(location.pathname+'?v='+srv+(location.hash||''))}}catch(e){}});
-window.ESTIMO_VERSION='2.7.0';
+window.ESTIMO_VERSION='2.7.1';
 </script>
 </body>
 </html>
