@@ -176,6 +176,22 @@ check('Editor : l’onglet Financier affiche l’écart sur l’estimation ajust
   has(E.Editor({ d, update: noop, back: noop }), 'Estimation ajustée', 'Prix au m² (automatique)');
 });
 
+check('Editor : l’écart sous le prix au m² compare deux prix au m²', () => {
+  // 375 000 € / 68 m² contre 6 000 €/m² : environ −8,1 %. L’ancienne formule
+  // divisait le prix total par le prix au m² et affichait 6150,0 %.
+  const d = mkDos({
+    bien: { ...E.blank().bien, carrez: '68' },
+    technique: { ...E.blank().technique },
+    dvf: { ...DVFILE, median: 6000, q1: 5500, q3: 6500 },
+    financier: { ...E.blank().financier, prixAttendu: '375000' },
+  });
+  const A = E.computeAjust(d);
+  if (A.m2 !== 6000) throw new Error('cas de non-régression : prix ajusté attendu 6000, obtenu ' + A.m2);
+  const t = render(E.Editor({ d, update: noop, back: noop }));
+  if (!t.includes('écart -8,1 %')) throw new Error('écart attendu -8,1 %, rendu : ' + ((t.match(/écart [^%]+%/) || ['absent'])[0]));
+  if (t.includes('6150,0')) throw new Error('l’écart compare encore le prix total (375 000 €) au prix au m²');
+});
+
 check('Editor : plus de carte Fiche d\u2019estimation dans Financier, avis de valeur en bas', () => {
   const t = render(E.Editor({ d: mkDos({ dvf: DVFILE }), update: noop, back: noop }));
   if (t.includes('Fiche d\u2019estimation')) throw new Error('la carte redondante est encore rendue');
